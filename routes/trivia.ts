@@ -80,8 +80,8 @@ async function getQuestion() {
 /**
  * Endpoints
  */
-router.get("/question", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]: send question");
+router.get("/:roomID/question", async (req, res) => {
+  console.log("🙋‍♀️ [trivia]:", `send question, roomID: ${req.params.roomID}`);
 
   try {
     // if (typeof interval === "undefined") {
@@ -116,15 +116,28 @@ router.get("/:roomID/setup", async (req, res) => {
   res.sendStatus(200);
 });
 
-router.post("/:roomID/vote", async (req, res) => {});
+router.post("/:roomID/vote", async (req, res) => {
+  console.log("🙋‍♀️ [trivia]:", `handle vote, roomID: ${req.params.roomID}`);
 
-router.get("/reset", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]: reset state");
+  const { vote } = req.body;
+
+  votes = [...votes, vote];
+
+  await pusher.trigger("trivia", "vote", {
+    votes,
+  });
+
+  res.sendStatus(200);
+});
+
+router.get("/:roomID/reset", async (req, res) => {
+  console.log("🙋‍♀️ [trivia]:", `reset state, roomID: ${req.params.roomID}`);
 
   questions = [];
-  timer = 0;
   question = null;
+  votes = [];
 
+  timer = 0;
   if (interval) clearInterval(interval);
 
   res.sendStatus(200);
