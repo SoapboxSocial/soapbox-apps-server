@@ -1,24 +1,25 @@
+import cors from "cors";
 import express from "express";
+import trivia from "./routes/trivia";
 
 const app = express();
 
-const PORT = 8080;
+/**
+ * App Middleware
+ */
+app.use(cors());
 
-app.get("/", async (_, res) => res.send("🧼 Soapbox Minis Server"));
+/**
+ * App Routes
+ */
+app.use("/trivia", trivia);
 
-app.get("/trivia/:roomId", async (req, res) => {
-  try {
-    const roomId = req.params.roomId;
+/**
+ * App Startup
+ */
 
-    res.send(roomId);
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+app.set("PORT", process.env.PORT || 8080);
 
-app.listen(PORT, () => {
-  console.log(`⚡️ [server]: running at https://localhost:${PORT}`);
+app.listen(app.get("PORT"), () => {
+  console.log(`🧼 [server]: listening at ${app.get("PORT")}`);
 });
