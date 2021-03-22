@@ -8,6 +8,7 @@ const app = express();
  * App Middleware
  */
 app.use(cors());
+app.use(express.json());
 
 /**
  * App Routes

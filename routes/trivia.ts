@@ -31,13 +31,28 @@ let votes: string[] = [];
 let interval: NodeJS.Timeout;
 let timer: number = 0;
 
+type Trivia = {
+  active?: Question | null;
+  interval?: NodeJS.Timeout;
+  questions: Question[] | [];
+  timer: number;
+  votes: string[] | [];
+};
+
+/**
+ * Trivia Mini Instances
+ */
+let instances = new Map<string, Trivia>();
+
+console.log(instances.keys());
+
 /**
  * Middleware
  */
 router.use(async (req, res, next) => {
-  // console.log("🧼 [server]: current timestamp", Date.now());
-
   if (!sessionToken) {
+    console.log("🙋‍♀️ [trivia]: get new sessionToken");
+
     sessionToken = await getSessionToken();
   }
 
@@ -103,21 +118,43 @@ router.get("/:roomID/question", async (req, res) => {
 });
 
 router.get("/:roomID/setup", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]:", `setup trivia, roomID: ${req.params.roomID}`);
+  const roomID = req.params.roomID;
+  const category = req.query.category;
 
-  if (typeof question === "undefined") {
-    await getQuestion();
+  console.log(
+    `🙋‍♀️ [trivia][roomID: ${roomID}][category: ${category}]:`,
+    `setup trivia`
+  );
+
+  if (typeof instances.get(roomID) === "undefined") {
+    const _questions = await getQuestions(sessionToken, category);
+
+    console.log(_questions);
+
+    const _active = _questions[getRandom(questions.length)];
+
+    instances.set(roomID, {
+      questions: _questions,
+      active: _active,
+      votes: [],
+      timer: 0,
+    });
+
+    await pusher.trigger("trivia", "question", {
+      question: _active,
+    });
   }
-
-  await pusher.trigger("trivia", "question", {
-    question,
-  });
 
   res.sendStatus(200);
 });
 
 router.post("/:roomID/vote", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]:", `handle vote, roomID: ${req.params.roomID}`);
+  const roomID = req.params.roomID;
+
+  console.log(
+    `🙋‍♀️ [trivia][${roomID}]:`,
+    `handle vote, roomID: ${req.params.roomID}`
+  );
 
   const { vote } = req.body;
 
@@ -131,7 +168,12 @@ router.post("/:roomID/vote", async (req, res) => {
 });
 
 router.get("/:roomID/reset", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]:", `reset state, roomID: ${req.params.roomID}`);
+  const roomID = req.params.roomID;
+
+  console.log(
+    `🙋‍♀️ [trivia][${roomID}]:`,
+    `reset state, roomID: ${req.params.roomID}`
+  );
 
   questions = [];
   question = null;

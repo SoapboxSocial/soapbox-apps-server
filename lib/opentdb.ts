@@ -1,4 +1,5 @@
 import fetch from "isomorphic-unfetch";
+import qs from "../util/qs";
 
 /**
  * **Code 0**: Success Returned results successfully.
@@ -36,17 +37,28 @@ export type Question = {
   incorrect_answers: ["True" | "False"];
 };
 
-export const getQuestions = async (sessionToken?: string) => {
-  const r = await fetch(
-    `https://opentdb.com/api.php?amount=50&type=boolean&token=${sessionToken}`
-  );
-
-  const {
-    results,
-  }: {
+export const getQuestions = async (sessionToken?: string, category?: any) => {
+  type Data = {
     response_code: ResponseCode;
     results: Question[];
-  } = await r.json();
+  };
+
+  console.log({ category });
+
+  const ENDPOINT =
+    "https://opentdb.com/api.php?" +
+    qs({
+      amount: "50",
+      type: "boolean",
+      ...(sessionToken && { token: sessionToken }),
+      ...(category && { category }),
+    });
+
+  console.log(ENDPOINT);
+
+  const r = await fetch(ENDPOINT);
+
+  const { results }: Data = await r.json();
 
   return results;
 };
