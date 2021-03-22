@@ -55,6 +55,10 @@ async function newQuestion(roomID: string) {
   const mini = instances.get(roomID);
 
   if (mini) {
+    await pusher.trigger(channelName, "vote", {
+      votes: [],
+    });
+
     let _questions = mini.questions;
 
     if (_questions.length === 0) {
@@ -90,10 +94,6 @@ function createTriviaTimer(roomID: string) {
       let timer = mini.timer;
 
       if (timer >= DURATION) {
-        await pusher.trigger(channelName, "vote", {
-          votes: [],
-        });
-
         await newQuestion(roomID);
 
         timer = 0;

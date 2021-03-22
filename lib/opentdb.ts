@@ -16,11 +16,11 @@ type ResponseCode = 0 | 1 | 2 | 3 | 4;
 
 export type Question = {
   category: string;
-  type: "boolean" | "multiple";
-  difficulty: "easy" | "medium" | "hard";
-  question: string;
   correct_answer: string;
+  difficulty: "easy" | "medium" | "hard";
   incorrect_answers: string[];
+  question: string;
+  type: "boolean" | "multiple";
 };
 
 export const getSessionToken = async () => {
