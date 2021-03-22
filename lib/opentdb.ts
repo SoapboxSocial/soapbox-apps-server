@@ -14,6 +14,15 @@ import qs from "../util/qs";
  */
 type ResponseCode = 0 | 1 | 2 | 3 | 4;
 
+export type Question = {
+  category: string;
+  type: "boolean" | "multiple";
+  difficulty: "easy" | "medium" | "hard";
+  question: string;
+  correct_answer: string;
+  incorrect_answers: string[];
+};
+
 export const getSessionToken = async () => {
   const r = await fetch(`https://opentdb.com/api_token.php?command=request`);
 
@@ -26,15 +35,6 @@ export const getSessionToken = async () => {
   } = await r.json();
 
   return token;
-};
-
-export type Question = {
-  category: string;
-  type: "boolean" | "multiple";
-  difficulty: "easy" | "medium" | "hard";
-  question: string;
-  correct_answer: string;
-  incorrect_answers: string[];
 };
 
 export const getQuestions = async (sessionToken?: string, category?: any) => {
@@ -57,7 +57,5 @@ export const getQuestions = async (sessionToken?: string, category?: any) => {
 
   if (response_code !== 0) throw new Error("Error Fetching Trivia Data");
 
-  const onlyBoolean = results.filter((val) => val.type === "boolean");
-
-  return onlyBoolean;
+  return results;
 };

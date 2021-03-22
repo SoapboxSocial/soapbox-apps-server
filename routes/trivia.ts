@@ -4,6 +4,8 @@ import { getQuestions, getSessionToken, Question } from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
+const DURATION = 15;
+
 const router = express.Router();
 
 const pusher = new Pusher({
@@ -67,8 +69,9 @@ async function newQuestion(roomID: string) {
 
     instances = new Map(instances).set(roomID, {
       ...mini,
-      questions: _questions,
       active: _active,
+      questions: _questions,
+      votes: [],
     });
 
     await pusher.trigger(channelName, "question", {
@@ -86,7 +89,11 @@ function createTriviaTimer(roomID: string) {
     if (mini) {
       let timer = mini.timer;
 
-      if (timer >= 30) {
+      if (timer >= DURATION) {
+        await pusher.trigger(channelName, "vote", {
+          votes: [],
+        });
+
         await newQuestion(roomID);
 
         timer = 0;
