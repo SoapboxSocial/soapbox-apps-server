@@ -53,7 +53,9 @@ export const getQuestions = async (sessionToken?: string, category?: any) => {
 
   const r = await fetch(ENDPOINT);
 
-  const { results }: Data = await r.json();
+  const { results, response_code }: Data = await r.json();
+
+  if (response_code !== 0) throw new Error("Error Fetching Trivia Data");
 
   const onlyBoolean = results.filter((val) => val.type === "boolean");
 

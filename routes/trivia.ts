@@ -47,7 +47,7 @@ router.use(async (req, res, next) => {
   next();
 });
 
-async function getQuestion(roomID: string) {
+async function newQuestion(roomID: string) {
   const channelName = `mini-trivia-${roomID}`;
 
   const mini = instances.get(roomID);
@@ -87,7 +87,7 @@ function createTriviaTimer(roomID: string) {
       let timer = mini.timer;
 
       if (timer >= 30) {
-        await getQuestion(roomID);
+        await newQuestion(roomID);
 
         timer = 0;
       } else {

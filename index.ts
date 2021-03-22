@@ -19,6 +19,12 @@ app.use("/trivia", trivia);
  * App Startup
  */
 
+// @ts-ignore
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.sendStatus(400);
+});
+
 app.set("PORT", process.env.PORT || 8080);
 
 app.listen(app.get("PORT"), () => {
