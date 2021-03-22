@@ -4,8 +4,6 @@ import { getQuestions, getSessionToken, Question } from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
-const DURATION = 30;
-
 const router = express.Router();
 
 const pusher = new Pusher({
@@ -18,22 +16,12 @@ const pusher = new Pusher({
 /**
  * Server State
  */
+
 let sessionToken: string;
 
-/**
- * Mini State
- */
-
-let questions: Question[] = [];
-let question: Question | null;
-let votes: string[] = [];
-
-let interval: NodeJS.Timeout;
-let timer: number = 0;
-
 type Trivia = {
-  active?: Question | null;
-  interval?: NodeJS.Timeout;
+  active: Question;
+  category: string;
   questions: Question[] | [];
   timer: number;
   votes: string[] | [];
@@ -44,7 +32,7 @@ type Trivia = {
  */
 let instances = new Map<string, Trivia>();
 
-console.log(instances.keys());
+let intervals = new Map<string, NodeJS.Timeout>();
 
 /**
  * Middleware
@@ -59,130 +47,170 @@ router.use(async (req, res, next) => {
   next();
 });
 
-async function getQuestion() {
-  /**
-   * If questions are empty or they run out, lets request new ones
-   */
-  if (questions.length === 0) {
-    console.log("🙋‍♀️ [trivia]: get new questions");
+async function getQuestion(roomID: string) {
+  const channelName = `mini-trivia-${roomID}`;
 
-    questions = await getQuestions(sessionToken);
+  const mini = instances.get(roomID);
+
+  if (mini) {
+    let _questions = mini.questions;
+
+    if (_questions.length === 0) {
+      console.log("🙋‍♀️ [trivia]: get new questions");
+
+      _questions = await getQuestions(sessionToken, mini.category);
+    }
+
+    const _active = _questions[getRandom(_questions.length)];
+
+    _questions = arrayRemove(_questions, _active);
+
+    instances = new Map(instances).set(roomID, {
+      ...mini,
+      questions: _questions,
+      active: _active,
+    });
+
+    await pusher.trigger(channelName, "question", {
+      question: _active,
+    });
   }
-
-  const random = questions[getRandom(questions.length)];
-
-  questions = arrayRemove(questions, question);
-
-  question = random;
 }
 
-// async function triviaTimer() {
-//   if (timer >= DURATION) {
-//     console.log("🙋‍♀️ [trivia]: reset timer");
+function createTriviaTimer(roomID: string) {
+  const channelName = `mini-trivia-${roomID}`;
 
-//     timer = 0;
-//   } else {
-//     // console.log("🙋‍♀️ [trivia]: increment timer");
+  return setInterval(async () => {
+    const mini = instances.get(roomID);
 
-//     timer++;
-//   }
+    if (mini) {
+      let timer = mini.timer;
 
-//   pusher.trigger("trivia", "timer", {
-//     timer,
-//   });
-// }
+      if (timer >= 30) {
+        await getQuestion(roomID);
+
+        timer = 0;
+      } else {
+        timer += 1;
+      }
+
+      instances = new Map(instances).set(roomID, {
+        ...mini,
+        timer: timer,
+      });
+
+      await pusher.trigger(channelName, "timer", {
+        timer: timer,
+      });
+    }
+  }, 1000);
+}
 
 /**
  * Endpoints
  */
-router.get("/:roomID/question", async (req, res) => {
-  console.log("🙋‍♀️ [trivia]:", `send question, roomID: ${req.params.roomID}`);
-
-  try {
-    // if (typeof interval === "undefined") {
-    //   interval = setInterval(triviaTimer, 1000);
-    // }
-
-    if (typeof question === "undefined") {
-      await getQuestion();
-    }
-
-    await pusher.trigger("trivia", "question", {
-      question,
-    });
-
-    res.sendStatus(200);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
 
 router.get("/:roomID/setup", async (req, res) => {
+  console.log(`🙋‍♀️ [trivia]:`, `setup trivia`);
+
   const roomID = req.params.roomID;
+
+  const channelName = `mini-trivia-${roomID}`;
+
   const category = req.query.category;
 
-  console.log(
-    `🙋‍♀️ [trivia][roomID: ${roomID}][category: ${category}]:`,
-    `setup trivia`
-  );
+  const mini = instances.get(roomID);
 
-  if (typeof instances.get(roomID) === "undefined") {
-    const _questions = await getQuestions(sessionToken, category);
+  if (!mini) {
+    let _questions = await getQuestions(sessionToken, category);
 
-    console.log(_questions);
+    const _active = _questions[getRandom(_questions.length)];
 
-    const _active = _questions[getRandom(questions.length)];
+    _questions = arrayRemove(_questions, _active);
 
     instances.set(roomID, {
-      questions: _questions,
       active: _active,
-      votes: [],
+      // @ts-ignore
+      category: category,
+      questions: _questions,
       timer: 0,
+      votes: [],
     });
 
-    await pusher.trigger("trivia", "question", {
+    intervals.set(roomID, createTriviaTimer(roomID));
+
+    await pusher.trigger(channelName, "question", {
       question: _active,
+    });
+  } else {
+    await pusher.trigger(channelName, "question", {
+      question: mini.active,
     });
   }
 
   res.sendStatus(200);
 });
 
+/**
+ * Handle voting for the current Mini
+ */
 router.post("/:roomID/vote", async (req, res) => {
+  console.log(`🙋‍♀️ [trivia]:`, `handle vote`);
+
   const roomID = req.params.roomID;
 
-  console.log(
-    `🙋‍♀️ [trivia][${roomID}]:`,
-    `handle vote, roomID: ${req.params.roomID}`
-  );
+  const channelName = `mini-trivia-${roomID}`;
 
   const { vote } = req.body;
 
-  votes = [...votes, vote];
+  const mini = instances.get(roomID);
 
-  await pusher.trigger("trivia", "vote", {
-    votes,
-  });
+  if (mini) {
+    const votes = [...mini.votes, vote];
+
+    instances = new Map(instances).set(roomID, {
+      ...mini,
+      votes: votes,
+    });
+
+    await pusher.trigger(channelName, "vote", {
+      votes,
+    });
+  }
 
   res.sendStatus(200);
 });
 
+/**
+ * Reset the current Mini by deleting the instance in the instances Map
+ */
 router.get("/:roomID/reset", async (req, res) => {
+  console.log(`🙋‍♀️ [trivia]:`, `reset state`);
+
   const roomID = req.params.roomID;
 
-  console.log(
-    `🙋‍♀️ [trivia][${roomID}]:`,
-    `reset state, roomID: ${req.params.roomID}`
-  );
+  const channelName = `mini-trivia-${roomID}`;
 
-  questions = [];
-  question = null;
-  votes = [];
+  await pusher.trigger(channelName, "question", {
+    question: null,
+  });
 
-  timer = 0;
-  if (interval) clearInterval(interval);
+  instances.delete(roomID);
+
+  intervals.delete(roomID);
 
   res.sendStatus(200);
+});
+
+/**
+ * Metadata endpoint for active Minis
+ */
+router.get("/metadata", async (req, res) => {
+  res.status(200).json({
+    active_instances: instances.size,
+    instances: Array.from(instances, ([roomID, mini]) => ({ roomID, ...mini })),
+    active_intervals: intervals.size,
+  });
 });
 
 export default router;

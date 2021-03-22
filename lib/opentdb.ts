@@ -30,11 +30,11 @@ export const getSessionToken = async () => {
 
 export type Question = {
   category: string;
-  type: "boolean";
+  type: "boolean" | "multiple";
   difficulty: "easy" | "medium" | "hard";
   question: string;
-  correct_answer: "True" | "False";
-  incorrect_answers: ["True" | "False"];
+  correct_answer: string;
+  incorrect_answers: string[];
 };
 
 export const getQuestions = async (sessionToken?: string, category?: any) => {
@@ -43,22 +43,19 @@ export const getQuestions = async (sessionToken?: string, category?: any) => {
     results: Question[];
   };
 
-  console.log({ category });
-
   const ENDPOINT =
     "https://opentdb.com/api.php?" +
     qs({
-      amount: "50",
-      type: "boolean",
+      amount: "25",
       ...(sessionToken && { token: sessionToken }),
-      ...(category && { category }),
+      ...(category !== "all" && { category }),
     });
-
-  console.log(ENDPOINT);
 
   const r = await fetch(ENDPOINT);
 
   const { results }: Data = await r.json();
 
-  return results;
+  const onlyBoolean = results.filter((val) => val.type === "boolean");
+
+  return onlyBoolean;
 };
