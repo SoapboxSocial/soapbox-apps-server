@@ -9,9 +9,9 @@ const DURATION = 15;
 const router = express.Router();
 
 const pusher = new Pusher({
-  appId: "1174088",
-  key: "5d3a6dfd9bbec762d06a",
-  secret: "9bda653d64053e1b38c6",
+  appId: process.env.PUSHER_APP_ID as string,
+  key: process.env.PUSHER_KEY as string,
+  secret: process.env.PUSHER_SECRET_KEY as string,
   cluster: "eu",
 });
 

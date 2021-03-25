@@ -2,6 +2,8 @@ import cors from "cors";
 import express from "express";
 import trivia from "./routes/trivia";
 
+require("dotenv").config();
+
 const app = express();
 
 /**
