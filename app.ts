@@ -1,5 +1,7 @@
+import compression from "compression";
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import trivia from "./routes/trivia";
 
 require("dotenv").config();
@@ -11,21 +13,19 @@ const app = express();
  */
 app.use(cors());
 app.use(express.json());
+app.use(compression());
+app.use(helmet());
 
 /**
  * App Routes
  */
 app.use("/trivia", trivia);
 
+app.get("/", (req, res) => res.send("Soapbox Apps Server"));
+
 /**
  * App Startup
  */
-
-// @ts-ignore
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.sendStatus(400);
-});
 
 app.set("PORT", process.env.PORT || 8080);
 
