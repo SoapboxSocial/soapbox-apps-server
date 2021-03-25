@@ -23,6 +23,11 @@ export type Question = {
   type: "boolean" | "multiple";
 };
 
+export type Vote = {
+  answer: string;
+  user: { display_name: string; id: number; image: string };
+};
+
 export const getSessionToken = async () => {
   const r = await fetch(`https://opentdb.com/api_token.php?command=request`);
 

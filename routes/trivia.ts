@@ -1,6 +1,6 @@
 import express from "express";
 import Pusher from "pusher";
-import { getQuestions, getSessionToken, Question } from "../lib/opentdb";
+import { getQuestions, getSessionToken, Question, Vote } from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
@@ -15,18 +15,13 @@ const pusher = new Pusher({
   cluster: "eu",
 });
 
-/**
- * Server State
- */
-
-let sessionToken: string;
-
 type Trivia = {
   active: Question;
   category: string;
   questions: Question[] | [];
+  sessionToken: string;
   timer: number;
-  votes: string[] | [];
+  votes: Vote[] | [];
 };
 
 /**
@@ -36,23 +31,10 @@ let instances = new Map<string, Trivia>();
 
 let intervals = new Map<string, NodeJS.Timeout>();
 
-/**
- * Middleware
- */
-router.use(async (req, res, next) => {
-  if (!sessionToken) {
-    console.log("🙋‍♀️ [trivia]: get new sessionToken");
-
-    sessionToken = await getSessionToken();
-  }
-
-  next();
-});
-
 function createTriviaTimer(roomID: string) {
   const channelName = `mini-trivia-${roomID}`;
 
-  return setInterval(() => {
+  const triviaTimer = setInterval(() => {
     console.time("setIntervalFunction");
 
     const mini = instances.get(roomID);
@@ -65,35 +47,64 @@ function createTriviaTimer(roomID: string) {
 
       if (timer >= DURATION) {
         /**
-         * Reset timer & votes
+         * Reset timer
          */
         timer = 0;
+
+        /**
+         * Reset votes
+         */
         votes = [];
 
-        /**
-         * Get new question
-         */
-        active = questions[getRandom(questions.length)];
+        if (questions.length > 0) {
+          /**
+           * Get new question
+           */
+          active = questions[getRandom(questions.length)];
 
-        /**
-         * Remove new question from questions array
-         */
-        questions = arrayRemove(questions, active);
+          /**
+           * Remove new question from questions array
+           */
+          questions = arrayRemove(questions, active);
 
-        /**
-         * Push with empty votes
-         */
-        pusher.trigger(channelName, "vote", {
-          votes: [],
-        });
+          /**
+           * Push with empty votes & new question to client
+           */
+          pusher.triggerBatch([
+            {
+              channel: channelName,
+              name: "vote",
+              data: { votes: votes },
+            },
+            {
+              channel: channelName,
+              name: "question",
+              data: { question: active },
+            },
+          ]);
+        } else {
+          clearInterval(triviaTimer);
 
-        /**
-         * Push new question to clients
-         */
-        pusher.trigger(channelName, "question", {
-          question: active,
-        });
+          /**
+           * Push with empty votes & empty question to bail out of UI
+           */
+          pusher.triggerBatch([
+            {
+              channel: channelName,
+              name: "vote",
+              data: { votes: votes },
+            },
+            {
+              channel: channelName,
+              name: "question",
+              data: { question: null },
+            },
+          ]);
+        }
       } else {
+        /**
+         * Increment Timer
+         */
         timer += 1;
       }
 
@@ -118,6 +129,8 @@ function createTriviaTimer(roomID: string) {
 
     console.timeEnd("setIntervalFunction");
   }, 1000);
+
+  return triviaTimer;
 }
 
 /**
@@ -125,8 +138,6 @@ function createTriviaTimer(roomID: string) {
  */
 
 router.get("/:roomID/setup", async (req, res) => {
-  console.log(`🙋‍♀️ [trivia]:`, `setup trivia`);
-
   const roomID = req.params.roomID;
 
   const channelName = `mini-trivia-${roomID}`;
@@ -136,18 +147,23 @@ router.get("/:roomID/setup", async (req, res) => {
   try {
     const mini = instances.get(roomID);
 
-    if (!mini) {
-      let _questions = await getQuestions(sessionToken, category);
+    if (mini) {
+      console.log(`🙋‍♀️ [trivia]:`, `update trivia`);
 
-      const _active = _questions[getRandom(_questions.length)];
+      let questions = await getQuestions(mini.sessionToken, category);
 
-      _questions = arrayRemove(_questions, _active);
+      const active = questions[getRandom(questions.length)];
 
-      instances.set(roomID, {
-        active: _active,
-        // @ts-ignore
-        category: category,
-        questions: _questions,
+      questions = arrayRemove(questions, active);
+
+      /**
+       * Update Game Instance
+       */
+      instances = new Map(instances).set(roomID, {
+        ...mini,
+        active: active,
+        category: category as string,
+        questions: questions,
         timer: 0,
         votes: [],
       });
@@ -155,7 +171,32 @@ router.get("/:roomID/setup", async (req, res) => {
       intervals.set(roomID, createTriviaTimer(roomID));
 
       await pusher.trigger(channelName, "question", {
-        question: _active,
+        question: active,
+      });
+    } else {
+      console.log(`🙋‍♀️ [trivia]:`, `setup trivia`);
+
+      const sessionToken = await getSessionToken();
+
+      let questions = await getQuestions(sessionToken, category);
+
+      const active = questions[getRandom(questions.length)];
+
+      questions = arrayRemove(questions, active);
+
+      instances.set(roomID, {
+        active: active,
+        category: category as string,
+        questions: questions,
+        sessionToken: sessionToken,
+        timer: 0,
+        votes: [],
+      });
+
+      intervals.set(roomID, createTriviaTimer(roomID));
+
+      await pusher.trigger(channelName, "question", {
+        question: active,
       });
     }
 
@@ -178,12 +219,20 @@ router.post("/:roomID/vote", async (req, res) => {
   const channelName = `mini-trivia-${roomID}`;
 
   try {
-    const { vote } = req.body;
+    const { vote }: { vote: Vote } = req.body;
 
     const mini = instances.get(roomID);
 
     if (mini) {
       const votes = [...mini.votes, vote];
+
+      const wasCorrect = vote.answer === mini.active.correct_answer;
+
+      console.log({ wasCorrect });
+
+      /**
+       * Increment their score
+       */
 
       instances = new Map(instances).set(roomID, {
         ...mini,
