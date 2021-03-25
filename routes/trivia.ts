@@ -49,67 +49,74 @@ router.use(async (req, res, next) => {
   next();
 });
 
-async function newQuestion(roomID: string) {
-  const channelName = `mini-trivia-${roomID}`;
-
-  const mini = instances.get(roomID);
-
-  if (mini) {
-    await pusher.trigger(channelName, "vote", {
-      votes: [],
-    });
-
-    let _questions = mini.questions;
-
-    if (_questions.length === 0) {
-      console.log("🙋‍♀️ [trivia]: get new questions");
-
-      _questions = await getQuestions(sessionToken, mini.category);
-    }
-
-    const _active = _questions[getRandom(_questions.length)];
-
-    _questions = arrayRemove(_questions, _active);
-
-    instances = new Map(instances).set(roomID, {
-      ...mini,
-      active: _active,
-      questions: _questions,
-      votes: [],
-    });
-
-    await pusher.trigger(channelName, "question", {
-      question: _active,
-    });
-  }
-}
-
 function createTriviaTimer(roomID: string) {
   const channelName = `mini-trivia-${roomID}`;
 
-  return setInterval(async () => {
+  return setInterval(() => {
+    console.time("setIntervalFunction");
+
     const mini = instances.get(roomID);
 
     if (mini) {
       let timer = mini.timer;
+      let questions = mini.questions;
+      let votes = mini.votes;
+      let active = mini.active;
 
       if (timer >= DURATION) {
-        await newQuestion(roomID);
-
+        /**
+         * Reset timer & votes
+         */
         timer = 0;
+        votes = [];
+
+        /**
+         * Get new question
+         */
+        active = questions[getRandom(questions.length)];
+
+        /**
+         * Remove new question from questions array
+         */
+        questions = arrayRemove(questions, active);
+
+        /**
+         * Push with empty votes
+         */
+        pusher.trigger(channelName, "vote", {
+          votes: [],
+        });
+
+        /**
+         * Push new question to clients
+         */
+        pusher.trigger(channelName, "question", {
+          question: active,
+        });
       } else {
         timer += 1;
       }
 
+      /**
+       * Update Instance
+       */
       instances = new Map(instances).set(roomID, {
         ...mini,
+        active: active,
+        questions: questions,
         timer: timer,
+        votes: votes,
       });
 
-      await pusher.trigger(channelName, "timer", {
+      /**
+       * Push Timer
+       */
+      pusher.trigger(channelName, "timer", {
         timer: timer,
       });
     }
+
+    console.timeEnd("setIntervalFunction");
   }, 1000);
 }
 
@@ -126,36 +133,38 @@ router.get("/:roomID/setup", async (req, res) => {
 
   const category = req.query.category;
 
-  const mini = instances.get(roomID);
+  try {
+    const mini = instances.get(roomID);
 
-  if (!mini) {
-    let _questions = await getQuestions(sessionToken, category);
+    if (!mini) {
+      let _questions = await getQuestions(sessionToken, category);
 
-    const _active = _questions[getRandom(_questions.length)];
+      const _active = _questions[getRandom(_questions.length)];
 
-    _questions = arrayRemove(_questions, _active);
+      _questions = arrayRemove(_questions, _active);
 
-    instances.set(roomID, {
-      active: _active,
-      // @ts-ignore
-      category: category,
-      questions: _questions,
-      timer: 0,
-      votes: [],
-    });
+      instances.set(roomID, {
+        active: _active,
+        // @ts-ignore
+        category: category,
+        questions: _questions,
+        timer: 0,
+        votes: [],
+      });
 
-    intervals.set(roomID, createTriviaTimer(roomID));
+      intervals.set(roomID, createTriviaTimer(roomID));
 
-    await pusher.trigger(channelName, "question", {
-      question: _active,
-    });
-  } else {
-    await pusher.trigger(channelName, "question", {
-      question: mini.active,
-    });
+      await pusher.trigger(channelName, "question", {
+        question: _active,
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send(error.message);
   }
-
-  res.sendStatus(200);
 });
 
 /**
@@ -168,24 +177,30 @@ router.post("/:roomID/vote", async (req, res) => {
 
   const channelName = `mini-trivia-${roomID}`;
 
-  const { vote } = req.body;
+  try {
+    const { vote } = req.body;
 
-  const mini = instances.get(roomID);
+    const mini = instances.get(roomID);
 
-  if (mini) {
-    const votes = [...mini.votes, vote];
+    if (mini) {
+      const votes = [...mini.votes, vote];
 
-    instances = new Map(instances).set(roomID, {
-      ...mini,
-      votes: votes,
-    });
+      instances = new Map(instances).set(roomID, {
+        ...mini,
+        votes: votes,
+      });
 
-    await pusher.trigger(channelName, "vote", {
-      votes,
-    });
+      await pusher.trigger(channelName, "vote", {
+        votes,
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send(error.message);
   }
-
-  res.sendStatus(200);
 });
 
 /**
@@ -198,25 +213,40 @@ router.get("/:roomID/reset", async (req, res) => {
 
   const channelName = `mini-trivia-${roomID}`;
 
-  await pusher.trigger(channelName, "question", {
-    question: null,
-  });
+  try {
+    const interval = intervals.get(roomID);
 
-  instances.delete(roomID);
+    if (interval) {
+      clearInterval(interval);
+    }
 
-  intervals.delete(roomID);
+    await pusher.trigger(channelName, "question", {
+      question: null,
+    });
 
-  res.sendStatus(200);
+    instances.delete(roomID);
+
+    intervals.delete(roomID);
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send(error.message);
+  }
 });
 
 /**
  * Metadata endpoint for active Minis
  */
-router.get("/metadata", async (req, res) => {
+router.get("/metadata", async (_, res) => {
   res.status(200).json({
     active_instances: instances.size,
-    instances: Array.from(instances, ([roomID, mini]) => ({ roomID, ...mini })),
     active_intervals: intervals.size,
+    instances: Array.from(instances, ([roomID, mini]) => ({
+      roomID,
+      ...mini,
+    })),
   });
 });
 

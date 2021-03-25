@@ -46,7 +46,7 @@ export const getQuestions = async (sessionToken?: string, category?: any) => {
   const ENDPOINT =
     "https://opentdb.com/api.php?" +
     qs({
-      amount: "25",
+      amount: "5",
       ...(sessionToken && { token: sessionToken }),
       ...(category !== "all" && { category }),
     });
