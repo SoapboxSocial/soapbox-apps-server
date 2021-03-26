@@ -4,7 +4,7 @@ import { getQuestions, getSessionToken, Question, Vote } from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
-const DURATION = 20;
+const DURATION = 15;
 
 const router = express.Router();
 
@@ -37,8 +37,6 @@ function createTriviaTimer(roomID: string) {
   const channelName = `mini-trivia-${roomID}`;
 
   const triviaTimer = setInterval(() => {
-    console.time("setIntervalFunction");
-
     const mini = instances.get(roomID);
 
     if (mini) {
@@ -137,8 +135,6 @@ function createTriviaTimer(roomID: string) {
         timer: timer,
       });
     }
-
-    console.timeEnd("setIntervalFunction");
   }, 1000);
 
   return triviaTimer;
