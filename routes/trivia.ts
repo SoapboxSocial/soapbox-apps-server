@@ -29,6 +29,8 @@ type Trivia = {
  */
 let instances = new Map<string, Trivia>();
 
+let scores = new Map<string, { [key: string]: number }>();
+
 let intervals = new Map<string, NodeJS.Timeout>();
 
 function createTriviaTimer(roomID: string) {
@@ -102,6 +104,11 @@ function createTriviaTimer(roomID: string) {
               channel: channelName,
               name: "question",
               data: { question: null },
+            },
+            {
+              channel: channelName,
+              name: "scores",
+              data: { scores: scores.get(roomID) },
             },
           ]);
         }
@@ -199,6 +206,8 @@ router.get("/:roomID/setup", async (req, res) => {
 
       intervals.set(roomID, createTriviaTimer(roomID));
 
+      scores.set(roomID, {});
+
       await pusher.trigger(channelName, "question", {
         question: active,
       });
@@ -230,13 +239,23 @@ router.post("/:roomID/vote", async (req, res) => {
     if (mini) {
       const votes = [...mini.votes, vote];
 
-      const wasCorrect = vote.answer === mini.active.correct_answer;
+      const display_name = vote.user.display_name;
 
-      console.log({ wasCorrect });
+      const isCorrect = vote.answer === mini.active.correct_answer;
 
-      /**
-       * Increment their score
-       */
+      let scoreboard = scores.get(roomID);
+
+      if (scoreboard) {
+        if (Object.getOwnPropertyDescriptor(scoreboard, display_name)) {
+          scoreboard[display_name] = scoreboard[display_name] += isCorrect
+            ? 100
+            : 0;
+        } else {
+          scoreboard[display_name] = isCorrect ? 100 : 0;
+        }
+
+        scores = new Map(scores).set(roomID, scoreboard);
+      }
 
       instances = new Map(instances).set(roomID, {
         ...mini,
@@ -280,6 +299,8 @@ router.get("/:roomID/reset", async (req, res) => {
     instances.delete(roomID);
 
     intervals.delete(roomID);
+
+    scores.delete(roomID);
 
     res.sendStatus(200);
   } catch (error) {
