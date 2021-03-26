@@ -4,7 +4,7 @@ import { getQuestions, getSessionToken, Question, Vote } from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
-const DURATION = 15;
+const DURATION = 20;
 
 const router = express.Router();
 
@@ -44,6 +44,10 @@ function createTriviaTimer(roomID: string) {
       let questions = mini.questions;
       let votes = mini.votes;
       let active = mini.active;
+
+      if (timer === DURATION - 5) {
+        pusher.trigger(channelName, "reveal", {});
+      }
 
       if (timer >= DURATION) {
         /**
