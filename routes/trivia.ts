@@ -1,5 +1,4 @@
 import express from "express";
-import Pusher from "pusher";
 import {
   DifficultyOptions,
   getQuestions,
@@ -7,19 +6,13 @@ import {
   Question,
   Vote,
 } from "../lib/opentdb";
+import { pusher } from "../lib/pusher";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
 const DURATION = 15;
 
 const router = express.Router();
-
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID as string,
-  key: process.env.PUSHER_KEY as string,
-  secret: process.env.PUSHER_SECRET_KEY as string,
-  cluster: "eu",
-});
 
 type Trivia = {
   active: Question;
