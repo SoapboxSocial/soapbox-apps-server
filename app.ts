@@ -2,6 +2,7 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import random from "./routes/random";
 import trivia from "./routes/trivia";
 
 require("dotenv").config();
@@ -20,6 +21,8 @@ app.use(helmet());
  * App Routes
  */
 app.use("/trivia", trivia);
+
+app.use("/random", random);
 
 app.get("/", (req, res) => res.send("Soapbox Apps Server"));
 
