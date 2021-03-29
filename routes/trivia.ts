@@ -1,6 +1,12 @@
 import express from "express";
 import Pusher from "pusher";
-import { getQuestions, getSessionToken, Question, Vote } from "../lib/opentdb";
+import {
+  DifficultyOptions,
+  getQuestions,
+  getSessionToken,
+  Question,
+  Vote,
+} from "../lib/opentdb";
 import arrayRemove from "../util/arrayRemove";
 import getRandom from "../util/getRandom";
 
@@ -18,6 +24,7 @@ const pusher = new Pusher({
 type Trivia = {
   active: Question;
   category: string;
+  difficulty: DifficultyOptions;
   questions: Question[] | [];
   sessionToken: string;
   timer: number;
@@ -149,7 +156,8 @@ router.get("/:roomID/setup", async (req, res) => {
 
   const channelName = `mini-trivia-${roomID}`;
 
-  const category = req.query.category;
+  const category = req.query.category as string;
+  const difficulty = req.query.difficulty as DifficultyOptions;
 
   try {
     const mini = instances.get(roomID);
@@ -157,7 +165,11 @@ router.get("/:roomID/setup", async (req, res) => {
     if (mini) {
       console.log(`🙋‍♀️ [trivia]:`, `update trivia`);
 
-      let questions = await getQuestions(mini.sessionToken, category);
+      let questions = await getQuestions(
+        mini.sessionToken,
+        category,
+        difficulty
+      );
 
       const active = questions[getRandom(questions.length)];
 
@@ -169,7 +181,8 @@ router.get("/:roomID/setup", async (req, res) => {
       instances = new Map(instances).set(roomID, {
         ...mini,
         active: active,
-        category: category as string,
+        category: category,
+        difficulty: difficulty,
         questions: questions,
         timer: 0,
         votes: [],
@@ -185,7 +198,7 @@ router.get("/:roomID/setup", async (req, res) => {
 
       const sessionToken = await getSessionToken();
 
-      let questions = await getQuestions(sessionToken, category);
+      let questions = await getQuestions(sessionToken, category, difficulty);
 
       const active = questions[getRandom(questions.length)];
 
@@ -193,7 +206,8 @@ router.get("/:roomID/setup", async (req, res) => {
 
       instances.set(roomID, {
         active: active,
-        category: category as string,
+        category: category,
+        difficulty: difficulty,
         questions: questions,
         sessionToken: sessionToken,
         timer: 0,
@@ -313,6 +327,7 @@ router.get("/metadata", async (_, res) => {
   res.status(200).json({
     active_instances: instances.size,
     active_intervals: intervals.size,
+    active_scores: scores.size,
     instances: Array.from(instances, ([roomID, mini]) => ({
       roomID,
       ...mini,

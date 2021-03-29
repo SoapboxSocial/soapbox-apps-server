@@ -1,3 +1,4 @@
+import type { User } from "@soapboxsocial/minis.js";
 import fetch from "isomorphic-unfetch";
 import qs from "../util/qs";
 
@@ -23,9 +24,11 @@ export type Question = {
   type: "boolean" | "multiple";
 };
 
+export type DifficultyOptions = "any" | "easy" | "medium" | "hard";
+
 export type Vote = {
   answer: string;
-  user: { display_name: string; id: number; image: string };
+  user: User;
 };
 
 export const getSessionToken = async () => {
@@ -42,7 +45,11 @@ export const getSessionToken = async () => {
   return token;
 };
 
-export const getQuestions = async (sessionToken?: string, category?: any) => {
+export const getQuestions = async (
+  sessionToken: string,
+  category: string,
+  difficulty: DifficultyOptions
+) => {
   type Data = {
     response_code: ResponseCode;
     results: Question[];
@@ -52,8 +59,9 @@ export const getQuestions = async (sessionToken?: string, category?: any) => {
     "https://opentdb.com/api.php?" +
     qs({
       amount: "5",
-      ...(sessionToken && { token: sessionToken }),
+      token: sessionToken,
       ...(category !== "all" && { category }),
+      ...(difficulty !== "any" && { difficulty }),
     });
 
   const r = await fetch(ENDPOINT);
