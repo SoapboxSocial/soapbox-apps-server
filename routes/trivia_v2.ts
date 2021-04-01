@@ -1,4 +1,3 @@
-import * as socketio from "socket.io"
 import express from "express";
 import {Socket} from "socket.io";
 
