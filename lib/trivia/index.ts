@@ -18,6 +18,7 @@ export class Trivia {
   private questions: Question[];
   private votes: Vote[];
   private scores: { [key: string]: number };
+  private isGameLoopRunning: boolean;
 
   constructor(roomID: string, category: string, difficulty: DifficultyOptions) {
     this.channel = `mini-trivia-${roomID}`;
@@ -26,6 +27,7 @@ export class Trivia {
     this.questions = [];
     this.votes = [];
     this.scores = {};
+    this.isGameLoopRunning = false;
   }
 
   start = async () => {
@@ -49,6 +51,10 @@ export class Trivia {
       this.category,
       this.difficulty
     );
+
+    if (!this.isGameLoopRunning) {
+      this.triviaGameLoop();
+    }
   };
 
   vote = async (vote: Vote) => {
@@ -75,6 +81,8 @@ export class Trivia {
 
   private triviaGameLoop = async () => {
     if (this.questions.length > 0) {
+      this.isGameLoopRunning = true;
+
       await pusher.trigger(this.channel, "vote", { votes: [] });
 
       const question = this.getNewQuestion();
@@ -89,6 +97,8 @@ export class Trivia {
 
       this.triviaGameLoop();
     } else {
+      this.isGameLoopRunning = false;
+
       const scores = this.getHighScores();
 
       await pusher.triggerBatch([
