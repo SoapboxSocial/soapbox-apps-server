@@ -1,7 +1,7 @@
 export default function delay(time = 1500) {
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     setTimeout(() => {
-      resolve(true);
+      resolve();
     }, time);
   });
 }
