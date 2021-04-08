@@ -49,8 +49,6 @@ export class Trivia {
       this.category,
       this.difficulty
     );
-
-    this.triviaGameLoop();
   };
 
   vote = async (vote: Vote) => {
