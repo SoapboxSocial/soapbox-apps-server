@@ -32,15 +32,17 @@ export type Vote = {
 };
 
 export const getSessionToken = async () => {
-  const r = await fetch(`https://opentdb.com/api_token.php?command=request`);
-
-  const {
-    token,
-  }: {
+  type Data = {
     response_code: ResponseCode;
     response_message: string;
     token: string;
-  } = await r.json();
+  };
+
+  const r = await fetch(`https://opentdb.com/api_token.php?command=request`);
+
+  const { token, response_code }: Data = await r.json();
+
+  if (response_code !== 0) throw new Error("Error Fetching Trivia Data");
 
   return token;
 };
