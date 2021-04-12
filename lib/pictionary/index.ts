@@ -1,5 +1,5 @@
 import { User } from "@soapboxsocial/minis.js";
-import sample from "../../util/sample";
+import sampleSize from "lodash.samplesize";
 import wordList from "../../data/word-list";
 
 export class Pictionary {
@@ -12,11 +12,21 @@ export class Pictionary {
     this.players = new Map();
   }
 
-  start = async () => {
-    this.word = sample(wordList);
-  };
+  start = async () => {};
 
   stop = async () => {};
+
+  getWordOptions = (count = 3) => {
+    console.log("[getWordOptions]");
+
+    return sampleSize(wordList, count);
+  };
+
+  setWord = (selectedWord: string) => {
+    console.log("[setWord]", selectedWord);
+
+    this.word = selectedWord;
+  };
 
   addPlayer = (socketID: string, user: User) => {
     console.log("[addPlayer]", socketID, user);
