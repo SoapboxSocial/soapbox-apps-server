@@ -1,6 +1,7 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Server } from "socket.io";
 import { Pictionary } from "../lib/pictionary";
+import isEqual from "../util/isEqual";
 
 const games = new Map<string, Pictionary>();
 
@@ -43,6 +44,7 @@ interface PictionaryListenEvents {
 interface PictionaryEmitEvents {
   WORDS: ({ words }: { words: string[] }) => void;
   SEND_WORD: ({ word }: { word: string }) => void;
+  PAINTER_ID: ({ id }: { id: string }) => void;
 }
 
 export default function pictionary(
@@ -64,6 +66,16 @@ export default function pictionary(
         const game = await getOrStartGame(roomID);
 
         game.addPlayer(socketID, user);
+
+        if (game.getPlayersCount() === 1) {
+          game.setPainter(socketID);
+
+          io.in(roomID).emit("PAINTER_ID", { id: socketID });
+
+          const words = game.getWordOptions();
+
+          socket.emit("WORDS", { words });
+        }
 
         const word = game.getWord();
 
@@ -106,13 +118,33 @@ export default function pictionary(
     });
 
     socket.on("GUESS_WORD", ({ guess }) => {
-      console.log("[GUESS_WORD]");
+      console.log("[GUESS_WORD]", guess);
 
       const instance = games.get(roomID);
 
       if (typeof instance === "undefined") {
         return;
       }
+
+      const correctWord = instance.getWord();
+
+      if (typeof correctWord === "undefined") {
+        return;
+      }
+
+      if (isEqual(guess, correctWord)) {
+        console.log("Correct Guess!");
+
+        instance.updateScore(socketID, 100);
+
+        /**
+         * Set next painter and new round
+         */
+
+        return;
+      }
+
+      console.log("Incorrect Guess!");
     });
 
     socket.on("CLOSE_GAME", async () => {
