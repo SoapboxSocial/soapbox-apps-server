@@ -28,6 +28,16 @@ export class Pictionary {
     this.word = selectedWord;
   };
 
+  getWord = () => {
+    console.log("[getWord]");
+
+    if (typeof this.word === "undefined") {
+      return;
+    }
+
+    return this.word;
+  };
+
   addPlayer = (socketID: string, user: User) => {
     console.log("[addPlayer]", socketID, user);
 
