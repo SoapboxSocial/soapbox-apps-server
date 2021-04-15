@@ -1,6 +1,6 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Server } from "socket.io";
-import Draw from "./draw";
+import Draw, { DrawOperation } from "./draw";
 import isEqual from "../../util/isEqual";
 
 const games = new Map<string, Draw>();
@@ -37,7 +37,9 @@ async function deleteGame(roomID: string) {
 }
 
 export interface DrawListenEvents {
+  CLEAR_CANVAS: () => void;
   CLOSE_GAME: () => void;
+  DRAW_OPERATION: (drawOperation: DrawOperation) => void;
   GUESS_WORD: ({ guess }: { guess: string }) => void;
   JOIN_GAME: ({ user }: { user: User }) => void;
   REROLL_WORDS: () => void;
@@ -45,7 +47,9 @@ export interface DrawListenEvents {
 }
 
 export interface DrawEmitEvents {
+  DRAW_OPERATION: (drawOperation: DrawOperation) => void;
   NEW_PAINTER: ({ id, user }: { id: string; user: User }) => void;
+  OLD_DRAW_OPERATIONS: (oldDrawOperations: DrawOperation[]) => void;
   SEND_WORD: ({ word }: { word?: string }) => void;
   TIME: (timeLeft: number) => void;
   WORDS: ({ words }: { words: string[] }) => void;
@@ -82,6 +86,8 @@ export default function drawWithFriends(
         if (typeof word === "undefined") {
           return;
         }
+
+        io.in(roomID).emit("OLD_DRAW_OPERATIONS", game.canvasOperations);
 
         socket.emit("SEND_WORD", { word: word });
       } catch (error) {
@@ -147,6 +153,32 @@ export default function drawWithFriends(
       }
 
       console.log("Incorrect Guess!");
+    });
+
+    socket.on("CLEAR_CANVAS", () => {
+      console.log("[CLEAR_CANVAS]");
+
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      game.clearCanvas();
+    });
+
+    socket.on("DRAW_OPERATION", (drawOperation) => {
+      console.log("[DRAW_OPERATION]", drawOperation);
+
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      game.addCanvasOperation(drawOperation);
+
+      io.in(roomID).emit("DRAW_OPERATION", drawOperation);
     });
 
     socket.on("CLOSE_GAME", async () => {

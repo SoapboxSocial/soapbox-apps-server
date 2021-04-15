@@ -21,7 +21,7 @@ export default class Draw {
   private word!: string;
   private painter!: { id: string; user: User };
   private scores: { [key: string]: number };
-  private canvasOperations: DrawOperation[];
+  public canvasOperations: DrawOperation[];
   private canvasTimestamp: number;
   private intervalId!: NodeJS.Timeout;
   private timeRemaining: number;
@@ -155,5 +155,14 @@ export default class Draw {
     }
 
     this.scores[socketID] = points;
+  };
+
+  addCanvasOperation = (operation: DrawOperation) => {
+    this.canvasOperations.push(operation);
+  };
+
+  clearCanvas = () => {
+    this.canvasOperations = [];
+    this.canvasTimestamp = Date.now();
   };
 }
