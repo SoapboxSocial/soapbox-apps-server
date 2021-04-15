@@ -22,7 +22,7 @@ export default class Draw {
   private painter!: { id: string; user: User };
   private scores: { [key: string]: number };
   public canvasOperations: DrawOperation[];
-  private canvasTimestamp: number;
+  public canvasTimestamp: number;
   private intervalId!: NodeJS.Timeout;
   private timeRemaining: number;
   private io: Server<DrawListenEvents, DrawEmitEvents>;

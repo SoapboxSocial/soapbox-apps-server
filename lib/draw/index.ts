@@ -52,6 +52,7 @@ export interface DrawEmitEvents {
   OLD_DRAW_OPERATIONS: (oldDrawOperations: DrawOperation[]) => void;
   SEND_WORD: ({ word }: { word?: string }) => void;
   TIME: (timeLeft: number) => void;
+  UPDATE_CANVAS: ({ canvasTimestamp }: { canvasTimestamp: number }) => void;
   WORDS: ({ words }: { words: string[] }) => void;
 }
 
@@ -165,11 +166,13 @@ export default function drawWithFriends(
       }
 
       game.clearCanvas();
+
+      io.in(roomID).emit("UPDATE_CANVAS", {
+        canvasTimestamp: game.canvasTimestamp,
+      });
     });
 
     socket.on("DRAW_OPERATION", (drawOperation) => {
-      console.log("[DRAW_OPERATION]", drawOperation);
-
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
