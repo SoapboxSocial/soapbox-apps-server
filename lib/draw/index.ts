@@ -5,11 +5,14 @@ import isEqual from "../../util/isEqual";
 
 const games = new Map<string, Draw>();
 
-async function getOrStartGame(roomID: string) {
+async function getOrStartGame(
+  roomID: string,
+  io: Server<DrawListenEvents, DrawEmitEvents>
+) {
   const instance = games.get(roomID);
 
   if (typeof instance === "undefined") {
-    const game = new Draw(roomID);
+    const game = new Draw(roomID, io);
 
     await game.start();
 
@@ -33,7 +36,7 @@ async function deleteGame(roomID: string) {
   games.delete(roomID);
 }
 
-interface DrawListenEvents {
+export interface DrawListenEvents {
   JOIN_GAME: ({ user }: { user: User }) => void;
   CLOSE_GAME: () => void;
   REROLL_WORDS: () => void;
@@ -41,10 +44,11 @@ interface DrawListenEvents {
   GUESS_WORD: ({ guess }: { guess: string }) => void;
 }
 
-interface DrawEmitEvents {
+export interface DrawEmitEvents {
   WORDS: ({ words }: { words: string[] }) => void;
-  SEND_WORD: ({ word }: { word: string }) => void;
-  PAINTER_ID: ({ id }: { id: string }) => void;
+  SEND_WORD: ({ word }: { word?: string }) => void;
+  NEW_PAINTER: ({ id, user }: { id: string; user: User }) => void;
+  TIME: (timeLeft: number) => void;
 }
 
 export default function drawWithFriends(
@@ -63,18 +67,14 @@ export default function drawWithFriends(
 
         socket.join(roomID);
 
-        const game = await getOrStartGame(roomID);
+        const game = await getOrStartGame(roomID, io);
 
-        game.addPlayer(socketID, user);
+        game.addPlayer(socket, user);
 
-        if (game.getPlayersCount() === 1) {
-          game.setPainter(socketID);
+        const painter = game.getPainter();
 
-          io.in(roomID).emit("PAINTER_ID", { id: socketID });
-
-          const words = game.getWordOptions();
-
-          socket.emit("WORDS", { words });
+        if (painter) {
+          io.in(roomID).emit("NEW_PAINTER", painter);
         }
 
         const word = game.getWord();
@@ -92,13 +92,13 @@ export default function drawWithFriends(
     socket.on("REROLL_WORDS", () => {
       console.log("[REROLL_WORDS]");
 
-      const instance = games.get(roomID);
+      const game = games.get(roomID);
 
-      if (typeof instance === "undefined") {
+      if (typeof game === "undefined") {
         return;
       }
 
-      const wordOptions = instance.getWordOptions();
+      const wordOptions = game.getWordOptions();
 
       socket.emit("WORDS", { words: wordOptions });
     });
@@ -106,13 +106,13 @@ export default function drawWithFriends(
     socket.on("SELECT_WORD", ({ word }) => {
       console.log("[SELECT_WORD]");
 
-      const instance = games.get(roomID);
+      const game = games.get(roomID);
 
-      if (typeof instance === "undefined") {
+      if (typeof game === "undefined") {
         return;
       }
 
-      instance.setWord(word);
+      game.setWord(word);
 
       io.in(roomID).emit("SEND_WORD", { word });
     });
@@ -120,13 +120,13 @@ export default function drawWithFriends(
     socket.on("GUESS_WORD", ({ guess }) => {
       console.log("[GUESS_WORD]", guess);
 
-      const instance = games.get(roomID);
+      const game = games.get(roomID);
 
-      if (typeof instance === "undefined") {
+      if (typeof game === "undefined") {
         return;
       }
 
-      const correctWord = instance.getWord();
+      const correctWord = game.getWord();
 
       if (typeof correctWord === "undefined") {
         return;
@@ -135,11 +135,13 @@ export default function drawWithFriends(
       if (isEqual(guess, correctWord)) {
         console.log("Correct Guess!");
 
-        instance.updateScore(socketID, 100);
+        game.updateScore(socketID, 100);
 
         /**
          * Set next painter and new round
          */
+
+        io.in(roomID).emit("SEND_WORD", { word: undefined });
 
         return;
       }
@@ -158,13 +160,13 @@ export default function drawWithFriends(
     socket.on("disconnect", (reason) => {
       console.log("[disconnect] socket disconnected with reason", reason);
 
-      const instance = games.get(roomID);
+      const game = games.get(roomID);
 
-      if (typeof instance === "undefined") {
+      if (typeof game === "undefined") {
         return;
       }
 
-      instance.removePlayer(socketID);
+      game.removePlayer(socketID);
 
       socket.leave(roomID);
     });

@@ -1,24 +1,63 @@
 import { User } from "@soapboxsocial/minis.js";
 import sampleSize from "lodash.samplesize";
+import { Server, Socket } from "socket.io";
+import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
+import delay from "../../util/delay";
 import sample from "../../util/sample";
+
+const ROUND_DURATION = 80;
 
 export default class Draw {
   private readonly roomID: string;
   private players: Map<string, User>;
   private word!: string;
-  private painter!: string;
+  private painter!: { id: string; user: User };
   private scores: { [key: string]: number };
+  private canvasOperations: {}[];
+  private canvasTimestamp: number;
+  private intervalId!: NodeJS.Timeout;
+  private timeRemaining: number;
+  private io: Server<DrawListenEvents, DrawEmitEvents>;
 
-  constructor(roomID: string) {
+  constructor(roomID: string, io: Server<DrawListenEvents, DrawEmitEvents>) {
     this.roomID = roomID;
+    this.io = io;
     this.players = new Map();
     this.scores = {};
+    this.canvasOperations = [];
+    this.canvasTimestamp = 0;
+    this.timeRemaining = ROUND_DURATION;
   }
 
-  start = async () => {};
+  start = async () => {
+    this.newRound();
+  };
 
   stop = async () => {};
+
+  newRound = () => {
+    this.canvasOperations = [];
+    this.canvasTimestamp = 0;
+
+    clearInterval(this.intervalId);
+
+    this.timeRemaining = ROUND_DURATION;
+
+    this.intervalId = setInterval(async () => {
+      this.timeRemaining = this.timeRemaining - 1;
+
+      this.io.in(this.roomID).emit("TIME", this.timeRemaining);
+
+      if (this.timeRemaining <= 0) {
+        clearInterval(this.intervalId);
+
+        await delay(5 * 1000);
+
+        this.newRound();
+      }
+    }, 1 * 1000);
+  };
 
   getWordOptions = (count = 3) => {
     console.log("[getWordOptions]");
@@ -42,30 +81,49 @@ export default class Draw {
     return this.word;
   };
 
-  addPlayer = (socketID: string, user: User) => {
+  addPlayer = (
+    socket: Socket<DrawListenEvents, DrawEmitEvents>,
+    user: User
+  ) => {
     console.log("[addPlayer]", user.username);
+
+    const socketID = socket.id;
 
     this.players.set(socketID, user);
 
     if (this.players.size === 1) {
-      this.painter = socketID;
+      this.painter = {
+        id: socketID,
+        user,
+      };
+
+      socket.in(this.roomID).emit("NEW_PAINTER", this.painter);
+
+      const words = this.getWordOptions();
+
+      socket.emit("WORDS", { words });
     }
   };
 
   setPainter = (socketID: string) => {
     console.log("[setPainter]");
 
-    this.painter = socketID;
+    const player = this.players.get(socketID);
+
+    if (typeof player === "undefined") {
+      return;
+    }
+
+    this.painter = {
+      id: socketID,
+      user: player,
+    };
   };
 
-  setRandomPainter = () => {
-    const players = Array.from(this.players.keys());
+  getPainter = () => {
+    console.log("[getPainter]");
 
-    const newPainter = sample(players);
-
-    this.painter = newPainter;
-
-    return newPainter;
+    return this.painter;
   };
 
   removePlayer = (socketID: string) => {
