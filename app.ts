@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
-import pictionary from "./routes/pictionary";
+import drawWithFriends from "./routes/draw";
 import random from "./routes/random";
 import trivia from "./routes/trivia";
 
@@ -46,4 +46,4 @@ const io = new Server(httpServer, {
  * Socket.io Handlers
  */
 
-pictionary(io);
+drawWithFriends(io);

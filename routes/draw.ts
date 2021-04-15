@@ -1,15 +1,15 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Server } from "socket.io";
-import { Pictionary } from "../lib/pictionary";
+import { Draw } from "../lib/draw";
 import isEqual from "../util/isEqual";
 
-const games = new Map<string, Pictionary>();
+const games = new Map<string, Draw>();
 
 async function getOrStartGame(roomID: string) {
   const instance = games.get(roomID);
 
   if (typeof instance === "undefined") {
-    const game = new Pictionary(roomID);
+    const game = new Draw(roomID);
 
     await game.start();
 
@@ -33,7 +33,7 @@ async function deleteGame(roomID: string) {
   games.delete(roomID);
 }
 
-interface PictionaryListenEvents {
+interface DrawListenEvents {
   JOIN_GAME: ({ user }: { user: User }) => void;
   CLOSE_GAME: () => void;
   REROLL_WORDS: () => void;
@@ -41,14 +41,14 @@ interface PictionaryListenEvents {
   GUESS_WORD: ({ guess }: { guess: string }) => void;
 }
 
-interface PictionaryEmitEvents {
+interface DrawEmitEvents {
   WORDS: ({ words }: { words: string[] }) => void;
   SEND_WORD: ({ word }: { word: string }) => void;
   PAINTER_ID: ({ id }: { id: string }) => void;
 }
 
-export default function pictionary(
-  io: Server<PictionaryListenEvents, PictionaryEmitEvents>
+export default function drawWithFriends(
+  io: Server<DrawListenEvents, DrawEmitEvents>
 ) {
   io.on("connection", (socket) => {
     const roomID = socket.handshake.query.roomID as string;

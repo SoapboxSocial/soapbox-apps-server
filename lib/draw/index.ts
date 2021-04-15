@@ -3,7 +3,7 @@ import sampleSize from "lodash.samplesize";
 import wordList from "../../data/word-list";
 import sample from "../../util/sample";
 
-export class Pictionary {
+export class Draw {
   private readonly roomID: string;
   private players: Map<string, User>;
   private word!: string;

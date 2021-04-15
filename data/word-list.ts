@@ -4959,7 +4959,6 @@ export default [
   "PICKLER",
   "PICKUP",
   "PICNIC",
-  "PICTIONARY",
   "PICTURE",
   "PICTURE FRAME",
   "PIE",
