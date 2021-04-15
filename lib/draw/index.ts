@@ -37,18 +37,18 @@ async function deleteGame(roomID: string) {
 }
 
 export interface DrawListenEvents {
-  JOIN_GAME: ({ user }: { user: User }) => void;
   CLOSE_GAME: () => void;
+  GUESS_WORD: ({ guess }: { guess: string }) => void;
+  JOIN_GAME: ({ user }: { user: User }) => void;
   REROLL_WORDS: () => void;
   SELECT_WORD: ({ word }: { word: string }) => void;
-  GUESS_WORD: ({ guess }: { guess: string }) => void;
 }
 
 export interface DrawEmitEvents {
-  WORDS: ({ words }: { words: string[] }) => void;
-  SEND_WORD: ({ word }: { word?: string }) => void;
   NEW_PAINTER: ({ id, user }: { id: string; user: User }) => void;
+  SEND_WORD: ({ word }: { word?: string }) => void;
   TIME: (timeLeft: number) => void;
+  WORDS: ({ words }: { words: string[] }) => void;
 }
 
 export default function drawWithFriends(

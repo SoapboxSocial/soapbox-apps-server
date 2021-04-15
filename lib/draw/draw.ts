@@ -8,13 +8,20 @@ import sample from "../../util/sample";
 
 const ROUND_DURATION = 80;
 
+export type DrawOperation = {
+  previous: number[];
+  current: number[];
+  color: string;
+  brushSize: "S" | "M" | "L";
+};
+
 export default class Draw {
   private readonly roomID: string;
   private players: Map<string, User>;
   private word!: string;
   private painter!: { id: string; user: User };
   private scores: { [key: string]: number };
-  private canvasOperations: {}[];
+  private canvasOperations: DrawOperation[];
   private canvasTimestamp: number;
   private intervalId!: NodeJS.Timeout;
   private timeRemaining: number;
