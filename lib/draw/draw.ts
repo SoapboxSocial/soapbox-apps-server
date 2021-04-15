@@ -8,11 +8,10 @@ import sample from "../../util/sample";
 
 const ROUND_DURATION = 80;
 
-export type DrawOperation = {
-  previous: number[];
-  current: number[];
-  color: string;
-  brushSize: "S" | "M" | "L";
+export type CanvasOperation = {
+  points: number[];
+  stroke: string;
+  strokeWidth: number;
 };
 
 export default class Draw {
@@ -21,7 +20,7 @@ export default class Draw {
   private word!: string;
   private painter!: { id: string; user: User };
   private scores: { [key: string]: number };
-  public canvasOperations: DrawOperation[];
+  public canvasOperations: CanvasOperation[];
   public canvasTimestamp: number;
   private intervalId!: NodeJS.Timeout;
   private timeRemaining: number;
@@ -157,7 +156,7 @@ export default class Draw {
     this.scores[socketID] = points;
   };
 
-  addCanvasOperation = (operation: DrawOperation) => {
+  addCanvasOperation = (operation: CanvasOperation) => {
     this.canvasOperations.push(operation);
   };
 

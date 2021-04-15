@@ -1,6 +1,6 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Server } from "socket.io";
-import Draw, { DrawOperation } from "./draw";
+import Draw, { CanvasOperation } from "./draw";
 import isEqual from "../../util/isEqual";
 
 const games = new Map<string, Draw>();
@@ -39,7 +39,7 @@ async function deleteGame(roomID: string) {
 export interface DrawListenEvents {
   CLEAR_CANVAS: () => void;
   CLOSE_GAME: () => void;
-  DRAW_OPERATION: (drawOperation: DrawOperation) => void;
+  DRAW_OPERATION: (drawOperation: CanvasOperation) => void;
   GUESS_WORD: ({ guess }: { guess: string }) => void;
   JOIN_GAME: ({ user }: { user: User }) => void;
   REROLL_WORDS: () => void;
@@ -47,9 +47,9 @@ export interface DrawListenEvents {
 }
 
 export interface DrawEmitEvents {
-  DRAW_OPERATION: (drawOperation: DrawOperation) => void;
+  DRAW_OPERATION: (drawOperation: CanvasOperation) => void;
   NEW_PAINTER: ({ id, user }: { id: string; user: User }) => void;
-  OLD_DRAW_OPERATIONS: (oldDrawOperations: DrawOperation[]) => void;
+  OLD_DRAW_OPERATIONS: (oldDrawOperations: CanvasOperation[]) => void;
   SEND_WORD: ({ word }: { word?: string }) => void;
   TIME: (timeLeft: number) => void;
   UPDATE_CANVAS: ({ canvasTimestamp }: { canvasTimestamp: number }) => void;
