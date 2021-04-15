@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
-import drawWithFriends from "./routes/draw";
+import drawWithFriends from "./lib/draw";
 import random from "./routes/random";
 import trivia from "./routes/trivia";
 
