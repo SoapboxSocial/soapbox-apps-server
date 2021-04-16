@@ -3,9 +3,12 @@ import sampleSize from "lodash.samplesize";
 import { Server, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
+import delay from "../../util/delay";
 import sample from "../../util/sample";
 
 const ROUND_DURATION = 60;
+
+const NEW_ROUND_DELAY = 10 * 1000;
 
 export type CanvasOperation = {
   points: number[];
@@ -75,6 +78,15 @@ export default class Draw {
     console.log("[endRound]");
 
     clearInterval(this.intervalId);
+
+    // Send Scores
+    const scores = this.getHighScores();
+
+    this.io.in(this.roomID).emit("SEND_SCORES", scores);
+
+    await delay(NEW_ROUND_DELAY);
+
+    this.io.in(this.roomID).emit("SEND_SCORES");
 
     // Wipe Canvas
     this.io.in(this.roomID).emit("UPDATE_CANVAS", {
@@ -194,5 +206,21 @@ export default class Draw {
   clearCanvas = () => {
     this.canvasOperations = [];
     this.canvasTimestamp = Date.now();
+  };
+
+  getHighScores = () => {
+    const scoresArray = Object.entries(this.scores).map(([id, score]) => {
+      const user = this.players.get(id);
+
+      return {
+        id,
+        display_name: user?.display_name ?? user?.username ?? "User",
+        score,
+      };
+    });
+
+    const scoresArrayDesc = scoresArray.sort((a, b) => b.score - a.score);
+
+    return scoresArrayDesc;
   };
 }
