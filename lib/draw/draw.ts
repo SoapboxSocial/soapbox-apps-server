@@ -1,15 +1,11 @@
 import { User } from "@soapboxsocial/minis.js";
 import sampleSize from "lodash.samplesize";
-import { timeStamp } from "node:console";
 import { Server, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
-import delay from "../../util/delay";
 import sample from "../../util/sample";
 
-const ROUND_DURATION = 80;
-
-const NEW_ROUND_DELAY = 5 * 1000;
+const ROUND_DURATION = 60;
 
 export type CanvasOperation = {
   points: number[];
@@ -41,18 +37,16 @@ export default class Draw {
 
   start = () => {};
 
-  stop = () => {};
+  stop = () => {
+    console.log("[stop]");
+
+    clearInterval(this.intervalId);
+  };
 
   newRound = async () => {
     console.log("[newRound]");
 
     clearInterval(this.intervalId);
-
-    // if (this.painter) {
-    //   await delay(NEW_ROUND_DELAY);
-    // }
-
-    //  Choose New Painter
 
     // Reset Timer
     this.timeRemaining = ROUND_DURATION;
