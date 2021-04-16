@@ -2,6 +2,8 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import { Server } from "socket.io";
+import drawWithFriends from "./lib/draw";
 import random from "./routes/random";
 import trivia from "./routes/trivia";
 
@@ -32,6 +34,16 @@ app.get("/", (req, res) => res.send("Soapbox Apps Server"));
 
 app.set("PORT", process.env.PORT || 8080);
 
-app.listen(app.get("PORT"), () => {
+const httpServer = app.listen(app.get("PORT"), () => {
   console.log(`🧼 [server]: listening at ${app.get("PORT")}`);
 });
+
+const io = new Server(httpServer, {
+  cors: { origin: "*" },
+});
+
+/**
+ * Socket.io Handlers
+ */
+
+drawWithFriends(io);
