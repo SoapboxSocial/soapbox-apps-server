@@ -1,5 +1,6 @@
 import { User } from "@soapboxsocial/minis.js";
 import sampleSize from "lodash.samplesize";
+import { timeStamp } from "node:console";
 import { Server, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
@@ -7,6 +8,8 @@ import delay from "../../util/delay";
 import sample from "../../util/sample";
 
 const ROUND_DURATION = 80;
+
+const NEW_ROUND_DELAY = 5 * 1000;
 
 export type CanvasOperation = {
   points: number[];
@@ -36,33 +39,71 @@ export default class Draw {
     this.timeRemaining = ROUND_DURATION;
   }
 
-  start = async () => {
-    this.newRound();
-  };
+  start = () => {};
 
-  stop = async () => {};
+  stop = () => {};
 
-  newRound = () => {
-    this.canvasOperations = [];
-    this.canvasTimestamp = 0;
+  newRound = async () => {
+    console.log("[newRound]");
 
     clearInterval(this.intervalId);
 
+    // if (this.painter) {
+    //   await delay(NEW_ROUND_DELAY);
+    // }
+
+    //  Choose New Painter
+
+    // Reset Timer
     this.timeRemaining = ROUND_DURATION;
 
+    // Wipe Canvas
+    this.canvasOperations = [];
+    this.canvasTimestamp = 0;
+
+    // Start The Game
     this.intervalId = setInterval(async () => {
+      // De-Increment Timer
       this.timeRemaining = this.timeRemaining - 1;
 
+      // Emit The Timer
       this.io.in(this.roomID).emit("TIME", this.timeRemaining);
 
       if (this.timeRemaining <= 0) {
         clearInterval(this.intervalId);
 
-        await delay(5 * 1000);
-
-        this.newRound();
+        this.endRound();
       }
     }, 1 * 1000);
+  };
+
+  endRound = async (winnerId?: string) => {
+    console.log("[endRound]");
+
+    clearInterval(this.intervalId);
+
+    // Wipe Canvas
+    this.io.in(this.roomID).emit("UPDATE_CANVAS", {
+      canvasTimestamp: this.canvasTimestamp,
+    });
+
+    // Wipe Current Word
+    this.io.in(this.roomID).emit("SEND_WORD", { word: undefined });
+
+    // Set New Painter, Either The Person Who Won The Round, Or A Random One
+    if (typeof winnerId === "undefined") {
+      this.setPainter(sample(Array.from(this.players.keys())));
+    } else {
+      this.setPainter(winnerId ?? this.painter.id);
+    }
+
+    // Send New Painter To All Players
+    this.io.in(this.roomID).emit("NEW_PAINTER", this.painter);
+
+    // Send New Words To Them
+    const words = this.getWordOptions();
+
+    this.io.to(this.painter.id).emit("WORDS", { words });
   };
 
   getWordOptions = (count = 3) => {
@@ -75,6 +116,8 @@ export default class Draw {
     console.log("[setWord]", selectedWord);
 
     this.word = selectedWord;
+
+    this.newRound();
   };
 
   getWord = () => {
@@ -103,7 +146,7 @@ export default class Draw {
         user,
       };
 
-      socket.in(this.roomID).emit("NEW_PAINTER", this.painter);
+      // socket.in(this.roomID).emit("NEW_PAINTER", this.painter);
 
       const words = this.getWordOptions();
 
@@ -136,12 +179,6 @@ export default class Draw {
     console.log("[removePlayer]", socketID);
 
     this.players.delete(socketID);
-  };
-
-  getPlayersCount = () => {
-    console.log("[getPlayersCount]");
-
-    return this.players.size;
   };
 
   updateScore = (socketID: string, points: number) => {

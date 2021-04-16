@@ -14,7 +14,7 @@ async function getOrStartGame(
   if (typeof instance === "undefined") {
     const game = new Draw(roomID, io);
 
-    await game.start();
+    game.start();
 
     games.set(roomID, game);
 
@@ -31,7 +31,7 @@ async function deleteGame(roomID: string) {
     return;
   }
 
-  await instance.stop();
+  instance.stop();
 
   games.delete(roomID);
 }
@@ -79,7 +79,7 @@ export default function drawWithFriends(
         const painter = game.getPainter();
 
         if (painter) {
-          io.in(roomID).emit("NEW_PAINTER", painter);
+          socket.emit("NEW_PAINTER", painter);
         }
 
         const word = game.getWord();
@@ -88,7 +88,7 @@ export default function drawWithFriends(
           return;
         }
 
-        io.in(roomID).emit("OLD_DRAW_OPERATIONS", game.canvasOperations);
+        socket.emit("OLD_DRAW_OPERATIONS", game.canvasOperations);
 
         socket.emit("SEND_WORD", { word: word });
       } catch (error) {
@@ -144,11 +144,7 @@ export default function drawWithFriends(
 
         game.updateScore(socketID, 100);
 
-        /**
-         * Set next painter and new round
-         */
-
-        io.in(roomID).emit("SEND_WORD", { word: undefined });
+        game.endRound(socketID);
 
         return;
       }
