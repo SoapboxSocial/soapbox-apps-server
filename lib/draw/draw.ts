@@ -185,6 +185,10 @@ export default class Draw {
     console.log("[removePlayer]", socketID);
 
     this.players.delete(socketID);
+
+    if (Object.prototype.hasOwnProperty.call(this.scores, socketID)) {
+      delete this.scores[socketID];
+    }
   };
 
   updateScore = (socketID: string, points: number) => {
