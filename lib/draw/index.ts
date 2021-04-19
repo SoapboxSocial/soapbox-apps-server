@@ -55,7 +55,7 @@ export interface DrawEmitEvents {
   UPDATE_CANVAS: ({ canvasTimestamp }: { canvasTimestamp: number }) => void;
   WORDS: ({ words }: { words: string[] }) => void;
   SEND_SCORES: (
-    scores?: { id: string; display_name: string; score: number }[]
+    scores?: { id: string | number; display_name: string; score: number }[]
   ) => void;
 }
 

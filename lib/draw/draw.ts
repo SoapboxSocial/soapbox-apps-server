@@ -152,8 +152,6 @@ export default class Draw {
         user,
       };
 
-      // socket.in(this.roomID).emit("NEW_PAINTER", this.painter);
-
       const words = this.getWordOptions();
 
       socket.emit("WORDS", { words });
@@ -185,22 +183,24 @@ export default class Draw {
     console.log("[removePlayer]", socketID);
 
     this.players.delete(socketID);
-
-    if (Object.prototype.hasOwnProperty.call(this.scores, socketID)) {
-      delete this.scores[socketID];
-    }
   };
 
   updateScore = (socketID: string, points: number) => {
     console.log("[updateScore]", socketID);
 
-    if (Object.prototype.hasOwnProperty.call(this.scores, socketID)) {
-      this.scores[socketID] = this.scores[socketID] += points;
+    const user = this.players.get(socketID);
+
+    if (typeof user === "undefined") {
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(this.scores, user.username)) {
+      this.scores[user.username] = this.scores[user.username] += points;
 
       return;
     }
 
-    this.scores[socketID] = points;
+    this.scores[user.username] = points;
   };
 
   addCanvasOperation = (operation: CanvasOperation) => {
@@ -213,11 +213,13 @@ export default class Draw {
   };
 
   getHighScores = () => {
-    const scoresArray = Object.entries(this.scores).map(([id, score]) => {
-      const user = this.players.get(id);
+    const userArray = Array.from(this.players.values());
+
+    const scoresArray = Object.entries(this.scores).map(([username, score]) => {
+      const user = userArray.find((el) => el.username === username);
 
       return {
-        id,
+        id: user?.id ?? "username",
         display_name: user?.display_name ?? user?.username ?? "User",
         score,
       };
