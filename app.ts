@@ -3,8 +3,9 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
+import polls from "./games/polls";
+import randomMember from "./games/random";
 import drawWithFriends from "./lib/draw";
-import randomMember from "./routes/random";
 import trivia from "./routes/trivia";
 
 require("dotenv").config();
@@ -47,3 +48,5 @@ const io = new Server(httpServer, {
 drawWithFriends(io);
 
 randomMember(io);
+
+polls(io);
