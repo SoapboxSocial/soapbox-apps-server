@@ -1,36 +1,51 @@
 import type { User } from "@soapboxsocial/minis.js";
-import express from "express";
-import { pusher } from "../lib/pusher";
-import getRandom from "../util/getRandom";
+import { Server } from "socket.io";
+import sample from "../util/sample";
 
-const router = express.Router();
+interface RandomListenEvents {
+  SEND_MEMBERS: (members: User[]) => void;
+}
 
-router.post("/:roomID/choose-member", async (req, res) => {
-  console.log(`🎲 [random]:`, `handle choose member`);
+interface RandomEmitEvents {
+  MEMBER: (data: User | null) => void;
+}
 
-  const roomID = req.params.roomID;
+export default function randomMember(
+  io: Server<RandomListenEvents, RandomEmitEvents>
+) {
+  const nsp = io.of("/random");
 
-  const channelName = `mini-random-${roomID}`;
+  nsp.on("connection", (socket) => {
+    const roomID = socket.handshake.query.roomID as string;
 
-  try {
-    await pusher.trigger(channelName, "member", {
-      member: null,
+    const socketID = socket.id;
+
+    socket.join(roomID);
+
+    console.log(
+      "[randomMember]",
+      "[connection] new socket connected with id",
+      socketID
+    );
+
+    socket.on("SEND_MEMBERS", (members: User[]) => {
+      console.log("SEND_MEMBERS");
+
+      nsp.to(roomID).emit("MEMBER", null);
+
+      const member = sample(members);
+
+      nsp.to(roomID).emit("MEMBER", member);
     });
 
-    const { members }: { members: User[] } = req.body;
+    socket.on("disconnect", (reason) => {
+      console.log(
+        "[randomMember]",
+        "[disconnect] socket disconnected with reason",
+        reason
+      );
 
-    const member = members[getRandom(members.length)];
-
-    await pusher.trigger(channelName, "member", {
-      member: member,
+      socket.leave(roomID);
     });
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).send(error.message);
-  }
-});
-
-export default router;
+  });
+}

@@ -4,7 +4,7 @@ import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
 import drawWithFriends from "./lib/draw";
-import random from "./routes/random";
+import randomMember from "./routes/random";
 import trivia from "./routes/trivia";
 
 require("dotenv").config();
@@ -23,8 +23,6 @@ app.use(helmet());
  * App Routes
  */
 app.use("/trivia", trivia);
-
-app.use("/random", random);
 
 app.get("/", (req, res) => res.send("Soapbox Apps Server"));
 
@@ -47,3 +45,5 @@ const io = new Server(httpServer, {
  */
 
 drawWithFriends(io);
+
+randomMember(io);
