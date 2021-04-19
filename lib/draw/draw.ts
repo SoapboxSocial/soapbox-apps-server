@@ -97,10 +97,10 @@ export default class Draw {
     this.io.in(this.roomID).emit("SEND_WORD", { word: undefined });
 
     // Set New Painter, Either The Person Who Won The Round, Or A Random One
-    if (typeof winnerId === "undefined") {
-      this.setPainter(sample(Array.from(this.players.keys())));
+    if (typeof winnerId === "string" && this.players.has(winnerId)) {
+      this.setPainter(winnerId);
     } else {
-      this.setPainter(winnerId ?? this.painter.id);
+      this.setPainter(sample(Array.from(this.players.keys())));
     }
 
     // Send New Painter To All Players
