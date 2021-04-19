@@ -1,6 +1,6 @@
 import type { User } from "@soapboxsocial/minis.js";
 import { Server } from "socket.io";
-import sample from "../util/sample";
+import sample from "../../util/sample";
 
 interface RandomListenEvents {
   SEND_MEMBERS: (members: User[]) => void;
