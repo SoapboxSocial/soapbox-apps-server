@@ -1,6 +1,6 @@
 import express from "express";
+import { Trivia } from "../games/trivia/trivia";
 import { DifficultyOptions, Vote } from "../lib/opentdb";
-import { Trivia } from "../lib/trivia";
 
 const router = express.Router();
 

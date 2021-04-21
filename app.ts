@@ -4,9 +4,9 @@ import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
 import birds from "./games/birds";
+import drawWithFriends from "./games/draw";
 import polls from "./games/polls";
 import randomMember from "./games/random";
-import drawWithFriends from "./lib/draw";
 import trivia from "./routes/trivia";
 
 require("dotenv").config();

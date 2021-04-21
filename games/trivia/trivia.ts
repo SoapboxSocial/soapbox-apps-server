@@ -6,8 +6,8 @@ import {
   getSessionToken,
   Question,
   Vote,
-} from "../opentdb";
-import { pusher } from "../pusher";
+} from "../../lib/opentdb";
+import { pusher } from "../../lib/pusher";
 
 export class Trivia {
   private readonly channel: string;
