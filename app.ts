@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
+import birds from "./games/birds";
 import polls from "./games/polls";
 import randomMember from "./games/random";
 import drawWithFriends from "./lib/draw";
@@ -50,3 +51,5 @@ drawWithFriends(io);
 randomMember(io);
 
 polls(io);
+
+birds(io);
