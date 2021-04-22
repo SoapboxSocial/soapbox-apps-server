@@ -66,6 +66,8 @@ export default function trivia(
       socketID
     );
 
+    socket.join(roomID);
+
     socket.on("START_ROUND", async (category, difficulty) => {
       console.log("[trivia]", "[START_ROUND]");
 
