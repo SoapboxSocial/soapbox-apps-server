@@ -15,3 +15,16 @@ export const constants = {
   MAX_PIPE_HEIGHT: 630,
   HEIGHT_BETWEEN_PIPES: 200,
 };
+
+export enum PlayerStateEnum {
+  OnLoginScreen = 1,
+  WaitingInLobby = 2,
+  Playing = 3,
+  Died = 4,
+}
+
+export enum ServerStateEnum {
+  WaitingForPlayers = 1,
+  OnGame = 2,
+  Ranking = 3,
+}

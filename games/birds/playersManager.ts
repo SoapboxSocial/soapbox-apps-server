@@ -1,9 +1,8 @@
 import { EventEmitter } from "events";
 import type { Socket } from "socket.io";
-import * as enums from "./enums";
 import Player from "./player";
 import Scores from "./scoreSystem";
-import { PlayerStateEnum } from "./shared";
+import { PlayerStateEnum } from "./constants";
 
 const NB_AVAILABLE_BIRDS_COLOR = 8;
 
@@ -56,7 +55,7 @@ export default class PlayersManager extends EventEmitter {
 
     // Check if all players are ready
     for (const [id, player] of this.playersList.entries()) {
-      if (player.getState() === enums.PlayerState.WaitingInLobby) {
+      if (player.getState() === PlayerStateEnum.WaitingInLobby) {
         console.info(
           `[PlayersManager] ${id} is not yet ready, don't start game`
         );
@@ -88,8 +87,8 @@ export default class PlayersManager extends EventEmitter {
         const playerState = player.getState();
 
         return (
-          playerState === enums.PlayerState.Playing ||
-          playerState === enums.PlayerState.Died
+          playerState === PlayerStateEnum.Playing ||
+          playerState === PlayerStateEnum.Died
         );
       })
       .map((player) => player.getPlayerObject());
@@ -109,7 +108,7 @@ export default class PlayersManager extends EventEmitter {
     for (const [, player] of this.playersList.entries()) {
       const playerState = player.getState();
 
-      if (playerState === enums.PlayerState.Playing) {
+      if (playerState === PlayerStateEnum.Playing) {
         return true;
       }
     }

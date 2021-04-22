@@ -1,21 +1,18 @@
 import { Socket } from "socket.io";
-import { constants as Const } from "../constants";
 import { checkCollision } from "./collisionEngine";
-import { PlayerState, ServerState } from "./enums";
+import {
+  constants as Const,
+  PlayerStateEnum,
+  ServerStateEnum,
+} from "./constants";
 import PipeManager from "./pipeManager";
 import { PlayerTinyObject } from "./player";
 import PlayersManager from "./playersManager";
 
-export enum GameStateEnum {
-  WaitingForPlayers = 1,
-  OnGame = 2,
-  Ranking = 3,
-}
-
 export default class Game {
   private playersManager: PlayersManager;
   private pipeManager: PipeManager;
-  private state: GameStateEnum;
+  private state: ServerStateEnum;
   private timeStartGame: number;
   private lastTime: number | null;
   private timer: NodeJS.Timeout | null;
@@ -28,7 +25,7 @@ export default class Game {
   constructor() {
     this.playersManager = new PlayersManager();
     this.pipeManager = new PipeManager();
-    this.state = GameStateEnum.WaitingForPlayers;
+    this.state = ServerStateEnum.WaitingForPlayers;
     this.lastTime = null;
     this.timer = null;
     this.timeStartGame = 0;
@@ -85,7 +82,7 @@ export default class Game {
       (
         nick: string,
         floor: number,
-        fn: (gameState: GameStateEnum, playerId: string) => void
+        fn: (gameState: ServerStateEnum, playerId: string) => void
       ) => {
         fn(this.state, socket.id);
 
@@ -94,19 +91,19 @@ export default class Game {
     );
   }
 
-  updateGameState(newState: GameStateEnum, notifyClients: boolean) {
+  updateGameState(newState: ServerStateEnum, notifyClients: boolean) {
     var log = "\t[SERVER] Game state changed ! Server is now ";
 
     this.state = newState;
 
     switch (this.state) {
-      case ServerState.WaitingForPlayers:
+      case ServerStateEnum.WaitingForPlayers:
         log += "in lobby waiting for players";
         break;
-      case ServerState.OnGame:
+      case ServerStateEnum.OnGame:
         log += "in game !";
         break;
-      case ServerState.Ranking:
+      case ServerStateEnum.Ranking:
         log += "displaying ranking";
         break;
       default:
@@ -134,7 +131,7 @@ export default class Game {
 
     socket.on("change_ready_state", (readyState: boolean) => {
       // If the server is currently waiting for players, update ready state
-      if (this.state === ServerState.WaitingForPlayers) {
+      if (this.state === ServerStateEnum.WaitingForPlayers) {
         console.log("is waiting for players");
 
         this.playersManager.changeLobbyState(socket.id, readyState);
@@ -168,7 +165,7 @@ export default class Game {
     this.lastTime = null;
 
     // Change server state
-    this.updateGameState(ServerState.Ranking, true);
+    this.updateGameState(ServerStateEnum.Ranking, true);
 
     // Send players score
     this.playersManager.sendPlayerScore();
@@ -190,13 +187,13 @@ export default class Game {
       }
 
       // Notify players of the new game state
-      this.updateGameState(GameStateEnum.WaitingForPlayers, true);
+      this.updateGameState(ServerStateEnum.WaitingForPlayers, true);
     }, Const.TIME_BETWEEN_GAMES);
   }
 
   startGameLoop() {
     // Change server state
-    this.updateGameState(ServerState.OnGame, true);
+    this.updateGameState(ServerStateEnum.OnGame, true);
 
     // Create the first pipe
     this.pipeManager.newPipe();
@@ -230,7 +227,7 @@ export default class Game {
       if (
         checkCollision(
           this.pipeManager.getPotentialPipeHit(),
-          this.playersManager.getPlayersListByState(PlayerState.Playing)
+          this.playersManager.getPlayersListByState(PlayerStateEnum.Playing)
         )
       ) {
         if (!this.playersManager.arePlayersStillAlive()) {

@@ -1,6 +1,4 @@
-import { constants as Const } from "../constants";
-import { PlayerStateEnum } from "./shared";
-import * as enums from "./enums";
+import { constants as Const, PlayerStateEnum } from "./constants";
 
 // Defines
 const MAX_BIRDS_IN_A_ROW = 3;
@@ -46,7 +44,7 @@ export default class Player {
       rotation: 0,
       score: 0,
       best_score: 0,
-      state: enums.PlayerState.OnLoginScreen,
+      state: PlayerStateEnum.OnLoginScreen,
       posX: 0,
       posY: 0,
       floor: 0,
@@ -57,7 +55,7 @@ export default class Player {
     // console.info('Update player ' + this._playerTinyObject.nick);
 
     // If player is still alive, update its Y position
-    if (this._playerTinyObject.state === enums.PlayerState.Playing) {
+    if (this._playerTinyObject.state === PlayerStateEnum.Playing) {
       // calc now Y pos
       this._speedY += GRAVITY_SPEED;
       this._playerTinyObject.posY += Math.round(timeLapse * this._speedY);
@@ -70,7 +68,7 @@ export default class Player {
       if (this._playerTinyObject.rotation > MIN_ROTATION) {
         this._playerTinyObject.rotation = MIN_ROTATION;
       }
-    } else if (this._playerTinyObject.state === enums.PlayerState.Died) {
+    } else if (this._playerTinyObject.state === PlayerStateEnum.Died) {
       // If he's died, update it's X position
       this._playerTinyObject.posX -= Math.floor(timeLapse * Const.LEVEL_SPEED);
     }
@@ -113,15 +111,15 @@ export default class Player {
   died(nbPlayersLeft: number) {
     this._rank = nbPlayersLeft;
 
-    this._playerTinyObject.state = enums.PlayerState.Died;
+    this._playerTinyObject.state = PlayerStateEnum.Died;
 
     console.log(`[player] ${this._playerTinyObject.id} just died`);
   }
 
   setReadyState(readyState: boolean) {
     this._playerTinyObject.state = readyState
-      ? enums.PlayerState.Playing
-      : enums.PlayerState.WaitingInLobby;
+      ? PlayerStateEnum.Playing
+      : PlayerStateEnum.WaitingInLobby;
   }
 
   setBestScore(score: number) {
@@ -129,7 +127,7 @@ export default class Player {
   }
 
   isReadyToPlay() {
-    return this._playerTinyObject.state === enums.PlayerState.Playing;
+    return this._playerTinyObject.state === PlayerStateEnum.Playing;
   }
 
   getPlayerObject() {
@@ -160,7 +158,7 @@ export default class Player {
 
     // Update all register players
     if (this._playerTinyObject.nick !== "") {
-      this._playerTinyObject.state = enums.PlayerState.WaitingInLobby;
+      this._playerTinyObject.state = PlayerStateEnum.WaitingInLobby;
     }
   }
 

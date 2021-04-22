@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import Game from "./lib/game";
+import Game from "./game";
 
 type GamesMap = {
   [key: string]: Game;
