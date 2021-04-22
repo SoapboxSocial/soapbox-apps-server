@@ -33,10 +33,6 @@ export default class ScoreSystem {
     // If the player just beats his highscore, record it !
     if (lastScore > highScore) {
       this._bestScore[nick] = lastScore;
-
-      console.info(
-        `${nick} new high score (${lastScore}) was saved in the score array !`
-      );
     }
   }
 

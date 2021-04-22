@@ -22,8 +22,10 @@ export default class PlayersManager extends EventEmitter {
 
     this.playersList.set(id, newPlayer);
 
-    console.info(
-      `[PlayersManager] New player connected, there are currently ${this.playersList.size} player(s)`
+    console.log(
+      "[birds]",
+      "[PlayersManager]",
+      `new player connected, there are currently ${this.playersList.size} player(s)`
     );
 
     return newPlayer;
@@ -35,7 +37,11 @@ export default class PlayersManager extends EventEmitter {
 
   removePlayer(id: string) {
     if (this.playersList.has(id)) {
-      console.log(`[PlayersManager] Removing player of id: ${id}`);
+      console.log(
+        "[birds]",
+        "[PlayersManager]",
+        `removing player of id: ${id}`
+      );
 
       this.playersList.delete(id);
     }
@@ -45,7 +51,11 @@ export default class PlayersManager extends EventEmitter {
     const playerToReady = this.playersList.get(id);
 
     if (typeof playerToReady === "undefined") {
-      console.error(`[PlayersManager] Player with id: ${id} not found!`);
+      console.error(
+        "[birds]",
+        "[PlayersManager]",
+        `player with id: ${id} not found!`
+      );
 
       return;
     }
@@ -56,9 +66,7 @@ export default class PlayersManager extends EventEmitter {
     // Check if all players are ready
     for (const [id, player] of this.playersList.entries()) {
       if (player.getState() === PlayerStateEnum.WaitingInLobby) {
-        console.info(
-          `[PlayersManager] ${id} is not yet ready, don't start game`
-        );
+        console.log("[birds]", "[PlayersManager]", `${id} is not yet ready`);
 
         return;
       }

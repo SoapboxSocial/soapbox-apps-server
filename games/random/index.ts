@@ -23,13 +23,13 @@ export default function randomMember(
     socket.join(roomID);
 
     console.log(
-      "[randomMember]",
+      "[random]",
       "[connection] new socket connected with id",
       socketID
     );
 
     socket.on("SEND_MEMBERS", (members: User[]) => {
-      console.log("SEND_MEMBERS");
+      console.log("[random]", "[SEND_MEMBERS]");
 
       nsp.to(roomID).emit("MEMBER", null);
 
@@ -40,7 +40,7 @@ export default function randomMember(
 
     socket.on("disconnect", (reason) => {
       console.log(
-        "[randomMember]",
+        "[random]",
         "[disconnect] socket disconnected with reason",
         reason
       );

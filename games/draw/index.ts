@@ -69,11 +69,15 @@ export default function drawWithFriends(
 
     const socketID = socket.id;
 
-    console.log("[connection] new socket connected with id", socketID);
+    console.log(
+      "[draw]",
+      "[connection] new socket connected with id",
+      socketID
+    );
 
     socket.on("JOIN_GAME", async ({ user }: { user: User }) => {
       try {
-        console.log("[JOIN_GAME]");
+        console.log("[draw]", "[JOIN_GAME]");
 
         socket.join(roomID);
 
@@ -102,7 +106,7 @@ export default function drawWithFriends(
     });
 
     socket.on("REROLL_WORDS", () => {
-      console.log("[REROLL_WORDS]");
+      console.log("[draw]", "[REROLL_WORDS]");
 
       const game = games.get(roomID);
 
@@ -116,7 +120,7 @@ export default function drawWithFriends(
     });
 
     socket.on("SELECT_WORD", ({ word }) => {
-      console.log("[SELECT_WORD]");
+      console.log("[draw]", "[SELECT_WORD]");
 
       const game = games.get(roomID);
 
@@ -130,7 +134,7 @@ export default function drawWithFriends(
     });
 
     socket.on("GUESS_WORD", ({ guess }) => {
-      console.log("[GUESS_WORD]", guess);
+      console.log("[draw]", "[GUESS_WORD]", guess);
 
       const game = games.get(roomID);
 
@@ -145,20 +149,16 @@ export default function drawWithFriends(
       }
 
       if (isEqual(guess, correctWord)) {
-        console.log("Correct Guess!");
-
         game.updateScore(socketID, 100);
 
         game.endRound(socketID);
 
         return;
       }
-
-      console.log("Incorrect Guess!");
     });
 
     socket.on("CLEAR_CANVAS", () => {
-      console.log("[CLEAR_CANVAS]");
+      console.log("[draw]", "[CLEAR_CANVAS]");
 
       const game = games.get(roomID);
 
@@ -186,7 +186,7 @@ export default function drawWithFriends(
     });
 
     socket.on("CLOSE_GAME", async () => {
-      console.log("[CLOSE_GAME]");
+      console.log("[draw]", "[CLOSE_GAME]");
 
       nsp.in(roomID).disconnectSockets(true);
 
@@ -194,7 +194,11 @@ export default function drawWithFriends(
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("[disconnect] socket disconnected with reason", reason);
+      console.log(
+        "[draw]",
+        "[disconnect] socket disconnected with reason",
+        reason
+      );
 
       const game = games.get(roomID);
 

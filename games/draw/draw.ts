@@ -44,14 +44,10 @@ export default class Draw {
   start = () => {};
 
   stop = () => {
-    console.log("[stop]");
-
     clearInterval(this.intervalId);
   };
 
   newRound = async () => {
-    console.log("[newRound]");
-
     clearInterval(this.intervalId);
 
     // Reset Timer
@@ -78,8 +74,6 @@ export default class Draw {
   };
 
   endRound = async (winnerId?: string) => {
-    console.log("[endRound]");
-
     clearInterval(this.intervalId);
 
     // Send Scores
@@ -116,22 +110,16 @@ export default class Draw {
   };
 
   getWordOptions = (count = 3) => {
-    console.log("[getWordOptions]");
-
     return sampleSize(wordList, count);
   };
 
   setWord = (selectedWord: string) => {
-    console.log("[setWord]", selectedWord);
-
     this.word = selectedWord;
 
     this.newRound();
   };
 
   getWord = () => {
-    console.log("[getWord]");
-
     if (typeof this.word === "undefined") {
       return;
     }
@@ -143,8 +131,6 @@ export default class Draw {
     socket: Socket<DrawListenEvents, DrawEmitEvents>,
     user: User
   ) => {
-    console.log("[addPlayer]", user.username);
-
     const socketID = socket.id;
 
     this.players.set(socketID, user);
@@ -162,8 +148,6 @@ export default class Draw {
   };
 
   setPainter = (socketID: string) => {
-    console.log("[setPainter]");
-
     const player = this.players.get(socketID);
 
     if (typeof player === "undefined") {
@@ -177,20 +161,14 @@ export default class Draw {
   };
 
   getPainter = () => {
-    console.log("[getPainter]");
-
     return this.painter;
   };
 
   removePlayer = (socketID: string) => {
-    console.log("[removePlayer]", socketID);
-
     this.players.delete(socketID);
   };
 
   updateScore = (socketID: string, points: number) => {
-    console.log("[updateScore]", socketID);
-
     const user = this.players.get(socketID);
 
     if (typeof user === "undefined") {

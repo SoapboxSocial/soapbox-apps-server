@@ -43,13 +43,13 @@ export default class Game {
 
   start() {
     this.playersManager.on("players-ready", () => {
-      console.log("players ready, start game!");
+      console.log("[birds]", "players ready, start game!");
 
       this.startGameLoop();
     });
 
     this.pipeManager.on("need_new_pipe", () => {
-      console.log("needs new pipe, generate one!");
+      console.log("[birds]", "generate new pipe!");
 
       // Create a pipe and send it to clients
       this.pipeManager.newPipe();
@@ -65,7 +65,11 @@ export default class Game {
 
     // Register to socket events
     socket.on("disconnect", (reason) => {
-      console.log(`${socket.id} disconnected. reason`, reason);
+      console.log(
+        "[birds]",
+        "[disconnect] socket disconnected with reason",
+        reason
+      );
 
       // Remove the player from the playersManager
       this.playersManager.removePlayer(socket.id);
@@ -92,25 +96,21 @@ export default class Game {
   }
 
   updateGameState(newState: ServerStateEnum, notifyClients: boolean) {
-    var log = "\t[SERVER] Game state changed ! Server is now ";
-
     this.state = newState;
 
     switch (this.state) {
       case ServerStateEnum.WaitingForPlayers:
-        log += "in lobby waiting for players";
+        console.log("[birds]", "[updateGameState]", "waiting for players");
         break;
       case ServerStateEnum.OnGame:
-        log += "in game !";
+        console.log("[birds]", "[updateGameState]", "playing game");
         break;
       case ServerStateEnum.Ranking:
-        log += "displaying ranking";
+        console.log("[birds]", "[updateGameState]", "displaying scoreboard");
         break;
       default:
-        log += "dead :p";
+        console.log("[birds]", "[updateGameState]", "server is dead");
     }
-
-    console.info(log);
 
     // If requested, inform clients about the change
     if (notifyClients) {
@@ -124,7 +124,11 @@ export default class Game {
     const player = this.playersManager.getPlayer(socket.id);
 
     if (typeof player === "undefined") {
-      console.error(`[playerLog] Player with id: ${socket.id} not found!`);
+      console.error(
+        "[birds]",
+        "[playerLog]",
+        `player with id: ${socket.id} not found!`
+      );
 
       return;
     }
@@ -132,7 +136,7 @@ export default class Game {
     socket.on("change_ready_state", (readyState: boolean) => {
       // If the server is currently waiting for players, update ready state
       if (this.state === ServerStateEnum.WaitingForPlayers) {
-        console.log("is waiting for players");
+        console.log("[birds]", "[change_ready_state]", "waiting for players");
 
         this.playersManager.changeLobbyState(socket.id, readyState);
 

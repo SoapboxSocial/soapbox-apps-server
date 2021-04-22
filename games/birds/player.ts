@@ -52,8 +52,6 @@ export default class Player {
   }
 
   update(timeLapse: number) {
-    // console.info('Update player ' + this._playerTinyObject.nick);
-
     // If player is still alive, update its Y position
     if (this._playerTinyObject.state === PlayerStateEnum.Playing) {
       // calc now Y pos
@@ -113,7 +111,11 @@ export default class Player {
 
     this._playerTinyObject.state = PlayerStateEnum.Died;
 
-    console.log(`[player] ${this._playerTinyObject.id} just died`);
+    console.log(
+      "[birds]",
+      "[died]",
+      `${this._playerTinyObject.nick} just died`
+    );
   }
 
   setReadyState(readyState: boolean) {

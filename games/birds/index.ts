@@ -50,7 +50,11 @@ export default function birds(io: Server) {
     }
 
     socket.on("close_game", () => {
-      console.log("[close_game]", `deleting game with roomID of ${roomID}`);
+      console.log(
+        "[birds]",
+        "[close_game]",
+        `deleting game with roomID of ${roomID}`
+      );
 
       deleteGame(roomID);
     });
