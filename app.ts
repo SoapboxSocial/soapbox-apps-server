@@ -3,10 +3,12 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { Server } from "socket.io";
+import birds from "./games/birds";
+import drawWithFriends from "./games/draw";
 import polls from "./games/polls";
 import randomMember from "./games/random";
-import drawWithFriends from "./lib/draw";
-import trivia from "./routes/trivia";
+import trivia from "./games/trivia";
+import wouldYouRather from "./games/would-you-rather";
 
 require("dotenv").config();
 
@@ -15,15 +17,14 @@ const app = express();
 /**
  * App Middleware
  */
+
 app.use(cors());
-app.use(express.json());
 app.use(compression());
 app.use(helmet());
 
 /**
  * App Routes
  */
-app.use("/trivia", trivia);
 
 app.get("/", (req, res) => res.send("Soapbox Apps Server"));
 
@@ -50,3 +51,9 @@ drawWithFriends(io);
 randomMember(io);
 
 polls(io);
+
+birds(io);
+
+wouldYouRather(io);
+
+trivia(io);

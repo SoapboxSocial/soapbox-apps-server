@@ -1,6 +1,6 @@
 import { User } from "@soapboxsocial/minis.js";
 import sampleSize from "lodash.samplesize";
-import { Server, Socket } from "socket.io";
+import { Namespace, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
 import delay from "../../util/delay";
@@ -26,11 +26,14 @@ export default class Draw {
   public canvasTimestamp: number;
   private intervalId!: NodeJS.Timeout;
   private timeRemaining: number;
-  private io: Server<DrawListenEvents, DrawEmitEvents>;
+  private nsp: Namespace<DrawListenEvents, DrawEmitEvents>;
 
-  constructor(roomID: string, io: Server<DrawListenEvents, DrawEmitEvents>) {
+  constructor(
+    roomID: string,
+    nsp: Namespace<DrawListenEvents, DrawEmitEvents>
+  ) {
     this.roomID = roomID;
-    this.io = io;
+    this.nsp = nsp;
     this.players = new Map();
     this.scores = {};
     this.canvasOperations = [];
@@ -64,7 +67,7 @@ export default class Draw {
       this.timeRemaining = this.timeRemaining - 1;
 
       // Emit The Timer
-      this.io.in(this.roomID).emit("TIME", this.timeRemaining);
+      this.nsp.in(this.roomID).emit("TIME", this.timeRemaining);
 
       if (this.timeRemaining <= 0) {
         clearInterval(this.intervalId);
@@ -82,19 +85,19 @@ export default class Draw {
     // Send Scores
     const scores = this.getHighScores();
 
-    this.io.in(this.roomID).emit("SEND_SCORES", scores);
+    this.nsp.in(this.roomID).emit("SEND_SCORES", scores);
 
     await delay(NEW_ROUND_DELAY);
 
-    this.io.in(this.roomID).emit("SEND_SCORES");
+    this.nsp.in(this.roomID).emit("SEND_SCORES");
 
     // Wipe Canvas
-    this.io.in(this.roomID).emit("UPDATE_CANVAS", {
+    this.nsp.in(this.roomID).emit("UPDATE_CANVAS", {
       canvasTimestamp: this.canvasTimestamp,
     });
 
     // Wipe Current Word
-    this.io.in(this.roomID).emit("SEND_WORD", { word: undefined });
+    this.nsp.in(this.roomID).emit("SEND_WORD", { word: undefined });
 
     // Set New Painter, Either The Person Who Won The Round, Or A Random One
     if (typeof winnerId === "string" && this.players.has(winnerId)) {
@@ -104,12 +107,12 @@ export default class Draw {
     }
 
     // Send New Painter To All Players
-    this.io.in(this.roomID).emit("NEW_PAINTER", this.painter);
+    this.nsp.in(this.roomID).emit("NEW_PAINTER", this.painter);
 
     // Send New Words To Them
     const words = this.getWordOptions();
 
-    this.io.to(this.painter.id).emit("WORDS", { words });
+    this.nsp.to(this.painter.id).emit("WORDS", { words });
   };
 
   getWordOptions = (count = 3) => {

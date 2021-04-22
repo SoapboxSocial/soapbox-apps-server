@@ -1,16 +1,18 @@
-import delay from "../../util/delay";
-import sample from "../../util/sample";
+import { Namespace } from "socket.io";
+import { TriviaEmitEvents, TriviaListenEvents } from ".";
 import {
   DifficultyOptions,
   getQuestions,
   getSessionToken,
   Question,
   Vote,
-} from "../opentdb";
-import { pusher } from "../pusher";
+} from "../../lib/opentdb";
+import delay from "../../util/delay";
+import sample from "../../util/sample";
 
-export class Trivia {
-  private readonly channel: string;
+export default class Trivia {
+  private readonly roomID: string;
+  private nsp: Namespace<TriviaListenEvents, TriviaEmitEvents>;
   private sessionToken!: string;
   private category: string;
   private difficulty: DifficultyOptions;
@@ -20,8 +22,14 @@ export class Trivia {
   private scores: { [key: string]: number };
   private isGameLoopRunning: boolean;
 
-  constructor(roomID: string, category: string, difficulty: DifficultyOptions) {
-    this.channel = `mini-trivia-${roomID}`;
+  constructor(
+    roomID: string,
+    category: string,
+    difficulty: DifficultyOptions,
+    nsp: Namespace<TriviaListenEvents, TriviaEmitEvents>
+  ) {
+    this.roomID = roomID;
+    this.nsp = nsp;
     this.category = category;
     this.difficulty = difficulty;
     this.questions = [];
@@ -30,7 +38,7 @@ export class Trivia {
     this.isGameLoopRunning = false;
   }
 
-  start = async () => {
+  public start = async () => {
     this.sessionToken = await getSessionToken();
 
     this.questions = await getQuestions(
@@ -42,7 +50,7 @@ export class Trivia {
     this.triviaGameLoop();
   };
 
-  update = async (category: string, difficulty: DifficultyOptions) => {
+  public update = async (category: string, difficulty: DifficultyOptions) => {
     this.category = category;
     this.difficulty = difficulty;
 
@@ -57,8 +65,8 @@ export class Trivia {
     }
   };
 
-  vote = async (vote: Vote) => {
-    this.votes = [...this.votes, vote];
+  public vote = (vote: Vote) => {
+    this.votes.push(vote);
 
     const display_name = vote.user.display_name;
 
@@ -72,26 +80,22 @@ export class Trivia {
       this.scores[display_name] = isCorrect ? 100 : 0;
     }
 
-    await pusher.trigger(this.channel, "vote", { votes: this.votes });
-  };
-
-  stop = async () => {
-    await pusher.trigger(this.channel, "question", { question: null });
+    this.nsp.in(this.roomID).emit("VOTES", this.votes);
   };
 
   private triviaGameLoop = async () => {
     if (this.questions.length > 0) {
       this.isGameLoopRunning = true;
 
-      await pusher.trigger(this.channel, "vote", { votes: [] });
+      this.nsp.in(this.roomID).emit("VOTES", []);
 
       const question = this.getNewQuestion();
 
-      await pusher.trigger(this.channel, "question", { question });
+      this.nsp.in(this.roomID).emit("QUESTION", question);
 
       await delay(10 * 1000);
 
-      await pusher.trigger(this.channel, "reveal", {});
+      this.nsp.in(this.roomID).emit("REVEAL");
 
       await delay(5 * 1000);
 
@@ -101,23 +105,11 @@ export class Trivia {
 
       const scores = this.getHighScores();
 
-      await pusher.triggerBatch([
-        {
-          channel: this.channel,
-          name: "vote",
-          data: { votes: [] },
-        },
-        {
-          channel: this.channel,
-          name: "question",
-          data: { question: null },
-        },
-        {
-          channel: this.channel,
-          name: "scores",
-          data: { scores: scores },
-        },
-      ]);
+      this.nsp.in(this.roomID).emit("VOTES", []);
+
+      this.nsp.in(this.roomID).emit("QUESTION", null);
+
+      this.nsp.in(this.roomID).emit("SCORES", scores);
     }
   };
 

@@ -42,7 +42,7 @@ export const getSessionToken = async () => {
 
   const { token, response_code }: Data = await r.json();
 
-  if (response_code !== 0) throw new Error("Error Fetching Trivia Data");
+  if (response_code !== 0) throw new Error("Error Fetching Session Token");
 
   return token;
 };
