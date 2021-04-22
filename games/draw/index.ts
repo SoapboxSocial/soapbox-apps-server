@@ -1,18 +1,18 @@
 import { User } from "@soapboxsocial/minis.js";
-import { Server } from "socket.io";
-import Draw, { CanvasOperation } from "./draw";
+import { Namespace, Server } from "socket.io";
 import isEqual from "../../util/isEqual";
+import Draw, { CanvasOperation } from "./draw";
 
 const games = new Map<string, Draw>();
 
 async function getOrStartGame(
   roomID: string,
-  io: Server<DrawListenEvents, DrawEmitEvents>
+  nsp: Namespace<DrawListenEvents, DrawEmitEvents>
 ) {
   const instance = games.get(roomID);
 
   if (typeof instance === "undefined") {
-    const game = new Draw(roomID, io);
+    const game = new Draw(roomID, nsp);
 
     game.start();
 
@@ -62,7 +62,9 @@ export interface DrawEmitEvents {
 export default function drawWithFriends(
   io: Server<DrawListenEvents, DrawEmitEvents>
 ) {
-  io.on("connection", (socket) => {
+  const nsp = io.of("/draw");
+
+  nsp.on("connection", (socket) => {
     const roomID = socket.handshake.query.roomID as string;
 
     const socketID = socket.id;
@@ -75,7 +77,7 @@ export default function drawWithFriends(
 
         socket.join(roomID);
 
-        const game = await getOrStartGame(roomID, io);
+        const game = await getOrStartGame(roomID, nsp);
 
         game.addPlayer(socket, user);
 
@@ -124,7 +126,7 @@ export default function drawWithFriends(
 
       game.setWord(word);
 
-      io.in(roomID).emit("SEND_WORD", { word });
+      nsp.in(roomID).emit("SEND_WORD", { word });
     });
 
     socket.on("GUESS_WORD", ({ guess }) => {
@@ -166,7 +168,7 @@ export default function drawWithFriends(
 
       game.clearCanvas();
 
-      io.in(roomID).emit("UPDATE_CANVAS", {
+      nsp.in(roomID).emit("UPDATE_CANVAS", {
         canvasTimestamp: game.canvasTimestamp,
       });
     });
@@ -180,13 +182,13 @@ export default function drawWithFriends(
 
       game.addCanvasOperation(drawOperation);
 
-      io.in(roomID).emit("DRAW_OPERATION", drawOperation);
+      nsp.in(roomID).emit("DRAW_OPERATION", drawOperation);
     });
 
     socket.on("CLOSE_GAME", async () => {
       console.log("[CLOSE_GAME]");
 
-      io.in(roomID).disconnectSockets(true);
+      nsp.in(roomID).disconnectSockets(true);
 
       await deleteGame(roomID);
     });
