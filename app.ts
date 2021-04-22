@@ -7,8 +7,8 @@ import birds from "./games/birds";
 import drawWithFriends from "./games/draw";
 import polls from "./games/polls";
 import randomMember from "./games/random";
+import trivia from "./games/trivia";
 import wouldYouRather from "./games/would-you-rather";
-import trivia from "./routes/trivia";
 
 require("dotenv").config();
 
@@ -17,15 +17,14 @@ const app = express();
 /**
  * App Middleware
  */
+
 app.use(cors());
-app.use(express.json());
 app.use(compression());
 app.use(helmet());
 
 /**
  * App Routes
  */
-app.use("/trivia", trivia);
 
 app.get("/", (req, res) => res.send("Soapbox Apps Server"));
 
@@ -56,3 +55,5 @@ polls(io);
 birds(io);
 
 wouldYouRather(io);
+
+trivia(io);
