@@ -72,7 +72,7 @@ export default class Werewolf {
 
     await delay(5 * 1000);
 
-    this.nsp.in(this.roomID).emit("ACT", "WEREWOLF");
+    this.nsp.in(this.roomID).emit("WAKE", "WEREWOLF");
   };
 
   public startDay = () => {
@@ -80,7 +80,7 @@ export default class Werewolf {
 
     this.nsp.in(this.roomID).emit("ACT", "DAY");
 
-    // 5a. Handle What Happened In The Night (Who Was Killed, Who Was Saved)
+    // 5a. Handle What Happened In The Night (Who Was Killed, Who Was Protected)
 
     // 5b. Start Day Cycle
     this.intervalId = setInterval(() => {

@@ -2,6 +2,7 @@ import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
 import Werewolf from "./werewolf";
 import Player from "./player";
+import delay from "../../util/delay";
 
 export interface WerewolfListenEvents {
   JOIN_GAME: (user: User) => void;
@@ -16,6 +17,8 @@ export interface WerewolfEmitEvents {
   WINNER: (winner: "VILLAGER" | "WEREWOLF") => void;
   PLAYERS: (players: Map<string, Player>) => void;
   ACT: (act: "NIGHT" | "WEREWOLF" | "DOCTOR" | "SEER" | "DAY") => void;
+  WAKE: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
+  SLEEP: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -73,7 +76,7 @@ export default function werewolf(
       }
     });
 
-    socket.on("CLOSE_GAME", async () => {
+    socket.on("CLOSE_GAME", () => {
       console.log("[draw]", "[CLOSE_GAME]");
 
       nsp.in(roomID).disconnectSockets(true);
@@ -81,7 +84,7 @@ export default function werewolf(
       deleteGame(roomID);
     });
 
-    socket.on("KILL", (id) => {
+    socket.on("KILL", async (id) => {
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
@@ -90,11 +93,14 @@ export default function werewolf(
 
       game.killPlayer(id);
 
-      // Next Act
-      nsp.in(roomID).emit("ACT", "DOCTOR");
+      nsp.in(roomID).emit("SLEEP", "WEREWOLF");
+
+      await delay(5 * 1000);
+
+      nsp.in(roomID).emit("WAKE", "DOCTOR");
     });
 
-    socket.on("HEAL", (id) => {
+    socket.on("HEAL", async (id) => {
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
@@ -103,11 +109,14 @@ export default function werewolf(
 
       game.healPlayer(id);
 
-      // Next Act
-      nsp.in(roomID).emit("ACT", "SEER");
+      nsp.in(roomID).emit("SLEEP", "DOCTOR");
+
+      await delay(5 * 1000);
+
+      nsp.in(roomID).emit("WAKE", "SEER");
     });
 
-    socket.on("SCRY", (id) => {
+    socket.on("SCRY", async (id) => {
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
@@ -116,7 +125,10 @@ export default function werewolf(
 
       game.scryPlayer(id);
 
-      // Start Cycle
+      nsp.in(roomID).emit("SLEEP", "SEER");
+
+      await delay(5 * 1000);
+
       game.startDay();
     });
 
