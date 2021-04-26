@@ -13,6 +13,10 @@ export default class Werewolf {
   private readonly nsp: Namespace<WerewolfListenEvents, WerewolfEmitEvents>;
   private readonly roomID: string;
 
+  private doctorID!: string;
+  private seerID!: string;
+  private werewolfIDs!: string[];
+
   constructor(
     roomID: string,
     nsp: Namespace<WerewolfListenEvents, WerewolfEmitEvents>
@@ -21,12 +25,38 @@ export default class Werewolf {
     this.roomID = roomID;
     this.players = new Map();
     this.timeRemaining = ROUND_DURATION;
+    this.werewolfIDs = [];
   }
 
   public addPlayer = (id: string, user: User) => {
-    // Assign Roles Based On Player Count
+    let role: PlayerRole = PlayerRole.VILLAGER;
 
-    const player = new Player(user, PlayerRole.VILLAGER);
+    let maxWerewolves = 2;
+    switch (true) {
+      case this.players.size > 8:
+        maxWerewolves = 3;
+        break;
+      case this.players.size > 12:
+        maxWerewolves = 4;
+        break;
+    }
+
+    switch (true) {
+      case typeof this.doctorID === "undefined":
+        this.doctorID = id;
+        role = PlayerRole.DOCTOR;
+        break;
+      case typeof this.seerID === "undefined":
+        this.seerID = id;
+        role = PlayerRole.SEER;
+        break;
+      case this.werewolfIDs.length < maxWerewolves:
+        this.werewolfIDs.push(id);
+        role = PlayerRole.WEREWOLF;
+        break;
+    }
+
+    const player = new Player(user, role);
 
     this.players.set(id, player);
 
