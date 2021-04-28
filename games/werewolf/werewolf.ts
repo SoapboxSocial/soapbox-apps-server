@@ -6,8 +6,19 @@ import Player, { PlayerRole } from "./player";
 
 const ROUND_DURATION = 60 * 3;
 
+export enum GameAct {
+  DAY = "DAY",
+  WEREWOLF = "WEREWOLF",
+  SEER = "SEER",
+  DOCTOR = "DOCTOR",
+  VILLAGER = "VILLAGER",
+  NIGHT = "NIGHT",
+}
+
 export default class Werewolf {
   public players: Map<string, Player>;
+  public act!: GameAct;
+
   private timeRemaining: number;
   private intervalId!: NodeJS.Timeout;
   private readonly nsp: Namespace<WerewolfListenEvents, WerewolfEmitEvents>;
@@ -64,7 +75,9 @@ export default class Werewolf {
       return;
     }
 
-    this.startNight();
+    if (typeof this.act === "undefined") {
+      this.startNight();
+    }
   };
 
   public removePlayer = (id: string) => {
@@ -102,17 +115,23 @@ export default class Werewolf {
   };
 
   public startNight = async () => {
-    this.nsp.in(this.roomID).emit("ACT", "NIGHT");
+    this.act = GameAct.NIGHT;
+
+    this.nsp.in(this.roomID).emit("ACT", GameAct.NIGHT);
 
     await delay(5 * 1000);
 
-    this.nsp.in(this.roomID).emit("WAKE", "WEREWOLF");
+    this.act = GameAct.WEREWOLF;
+
+    this.nsp.in(this.roomID).emit("ACT", GameAct.WEREWOLF);
   };
 
   public startDay = () => {
     clearInterval(this.intervalId);
 
-    this.nsp.in(this.roomID).emit("ACT", "DAY");
+    this.act = GameAct.DAY;
+
+    this.nsp.in(this.roomID).emit("ACT", GameAct.DAY);
 
     // 5a. Handle What Happened In The Night (Who Was Killed, Who Was Protected)
 
@@ -148,7 +167,7 @@ export default class Werewolf {
 
   private getVillagers = () => {
     const villagers = Array.from(this.players.values()).filter(
-      (player) => player.role === PlayerRole.VILLAGER
+      (player) => player.role !== PlayerRole.WEREWOLF
     );
 
     return villagers;
@@ -160,5 +179,9 @@ export default class Werewolf {
     );
 
     return werewolves;
+  };
+
+  public updateAct = (act: GameAct) => {
+    this.act = act;
   };
 }

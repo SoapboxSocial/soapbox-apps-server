@@ -1,8 +1,7 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
-import Werewolf from "./werewolf";
+import Werewolf, { GameAct } from "./werewolf";
 import Player from "./player";
-import delay from "../../util/delay";
 
 export interface WerewolfListenEvents {
   JOIN_GAME: (user: User) => void;
@@ -15,10 +14,9 @@ export interface WerewolfListenEvents {
 export interface WerewolfEmitEvents {
   TIME: (timeLeft: number) => void;
   WINNER: (winner: "VILLAGER" | "WEREWOLF") => void;
-  PLAYERS: (players: { [key: string]: Player }) => void;
-  ACT: (act: "NIGHT" | "WEREWOLF" | "DOCTOR" | "SEER" | "DAY") => void;
-  WAKE: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
-  SLEEP: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
+  PLAYERS: (players: { [id: string]: Player }) => void;
+  ACT: (act: GameAct) => void;
+  PLAYER: (player: Player) => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -56,6 +54,12 @@ export default function werewolf(
   const nsp = io.of("/werewolf");
 
   nsp.on("connection", (socket) => {
+    console.log(
+      "[werewolf]",
+      "[connection] socket connected with id",
+      socket.id
+    );
+
     const roomID = socket.handshake.query.roomID as string;
 
     const socketID = socket.id;
@@ -71,6 +75,10 @@ export default function werewolf(
         game.addPlayer(socketID, user);
 
         const players = Object.fromEntries(game.players.entries());
+
+        socket.emit("PLAYER", players[socketID]);
+
+        socket.emit("ACT", game.act);
 
         nsp.in(roomID).emit("PLAYERS", players);
       } catch (error) {
@@ -95,11 +103,9 @@ export default function werewolf(
 
       game.killPlayer(id);
 
-      nsp.in(roomID).emit("SLEEP", "WEREWOLF");
+      game.updateAct(GameAct.DOCTOR);
 
-      await delay(5 * 1000);
-
-      nsp.in(roomID).emit("WAKE", "DOCTOR");
+      nsp.in(roomID).emit("ACT", GameAct.DOCTOR);
     });
 
     socket.on("HEAL", async (id) => {
@@ -111,11 +117,9 @@ export default function werewolf(
 
       game.healPlayer(id);
 
-      nsp.in(roomID).emit("SLEEP", "DOCTOR");
+      game.updateAct(GameAct.SEER);
 
-      await delay(5 * 1000);
-
-      nsp.in(roomID).emit("WAKE", "SEER");
+      nsp.in(roomID).emit("ACT", GameAct.SEER);
     });
 
     socket.on("SCRY", async (id) => {
@@ -126,10 +130,6 @@ export default function werewolf(
       }
 
       game.scryPlayer(id);
-
-      nsp.in(roomID).emit("SLEEP", "SEER");
-
-      await delay(5 * 1000);
 
       game.startDay();
     });
