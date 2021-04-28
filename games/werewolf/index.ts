@@ -15,7 +15,7 @@ export interface WerewolfListenEvents {
 export interface WerewolfEmitEvents {
   TIME: (timeLeft: number) => void;
   WINNER: (winner: "VILLAGER" | "WEREWOLF") => void;
-  PLAYERS: (players: Map<string, Player>) => void;
+  PLAYERS: (players: { [key: string]: Player }) => void;
   ACT: (act: "NIGHT" | "WEREWOLF" | "DOCTOR" | "SEER" | "DAY") => void;
   WAKE: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
   SLEEP: (role: "WEREWOLF" | "DOCTOR" | "SEER") => void;
@@ -70,7 +70,9 @@ export default function werewolf(
 
         game.addPlayer(socketID, user);
 
-        socket.emit("PLAYERS", game.players);
+        const players = Object.fromEntries(game.players.entries());
+
+        nsp.in(roomID).emit("PLAYERS", players);
       } catch (error) {
         console.error(error);
       }
@@ -138,6 +140,14 @@ export default function werewolf(
         "[disconnect] socket disconnected with reason",
         reason
       );
+
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      game.removePlayer(socketID);
 
       socket.leave(roomID);
     });

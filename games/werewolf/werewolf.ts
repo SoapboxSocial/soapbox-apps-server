@@ -67,6 +67,10 @@ export default class Werewolf {
     this.startNight();
   };
 
+  public removePlayer = (id: string) => {
+    this.players.delete(id);
+  };
+
   public killPlayer = (id: string) => {
     const player = this.players.get(id);
 
