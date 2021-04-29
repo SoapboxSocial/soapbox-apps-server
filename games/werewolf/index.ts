@@ -17,6 +17,13 @@ export interface WerewolfEmitEvents {
   PLAYERS: (players: { [id: string]: Player }) => void;
   ACT: (act: GameAct) => void;
   PLAYER: (player: Player) => void;
+  SCRY_RESULT: ({
+    id,
+    isWerewolf,
+  }: {
+    id: string;
+    isWerewolf: boolean;
+  }) => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -129,7 +136,9 @@ export default function werewolf(
         return;
       }
 
-      game.scryPlayer(id);
+      const isWerewolf = game.scryPlayer(id);
+
+      socket.emit("SCRY_RESULT", { id, isWerewolf });
 
       game.startDay();
     });

@@ -7,6 +7,7 @@ import Player, { PlayerRole } from "./player";
 const ROUND_DURATION = 60 * 3;
 
 export enum GameAct {
+  VOTING = "VOTING",
   DAY = "DAY",
   WEREWOLF = "WEREWOLF",
   SEER = "SEER",
@@ -24,9 +25,9 @@ export default class Werewolf {
   private readonly nsp: Namespace<WerewolfListenEvents, WerewolfEmitEvents>;
   private readonly roomID: string;
 
-  private doctorID!: string;
-  private seerID!: string;
-  private werewolfIDs!: string[];
+  private doctorID?: string;
+  private seerID?: string;
+  private werewolfIDs: string[];
 
   constructor(
     roomID: string,
@@ -81,6 +82,18 @@ export default class Werewolf {
   };
 
   public removePlayer = (id: string) => {
+    switch (true) {
+      case this.werewolfIDs.includes(id):
+        this.werewolfIDs = this.werewolfIDs.filter((_id) => _id !== id);
+        break;
+      case this.doctorID === id:
+        this.doctorID = undefined;
+        break;
+      case this.seerID === id:
+        this.seerID = undefined;
+        break;
+    }
+
     this.players.delete(id);
   };
 
@@ -108,7 +121,7 @@ export default class Werewolf {
     const player = this.players.get(id);
 
     if (typeof player === "undefined") {
-      return;
+      return false;
     }
 
     return player.role === PlayerRole.WEREWOLF;
@@ -126,12 +139,22 @@ export default class Werewolf {
     this.nsp.in(this.roomID).emit("ACT", GameAct.WEREWOLF);
   };
 
-  public startDay = () => {
+  public startDay = async () => {
     clearInterval(this.intervalId);
 
     this.act = GameAct.DAY;
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.DAY);
+
+    await delay(5 * 1000);
+
+    const players = Object.fromEntries(this.players.entries());
+
+    this.nsp.in(this.roomID).emit("PLAYERS", players);
+
+    this.act = GameAct.VOTING;
+
+    this.nsp.in(this.roomID).emit("ACT", GameAct.VOTING);
 
     // 5a. Handle What Happened In The Night (Who Was Killed, Who Was Protected)
 
