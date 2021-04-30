@@ -2,7 +2,8 @@ import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
 import Werewolf, { GameAct } from "./werewolf";
 import Player from "./player";
-import sample from "../../util/sample";
+
+type ScryResult = { id: string; isWerewolf: boolean };
 
 export interface WerewolfListenEvents {
   CLOSE_GAME: () => void;
@@ -21,13 +22,7 @@ export interface WerewolfEmitEvents {
   ACT: (act: GameAct) => void;
   PLAYER: (player: Player) => void;
   MARKED_KILLS: (marked: string[]) => void;
-  SCRY_RESULT: ({
-    id,
-    isWerewolf,
-  }: {
-    id: string;
-    isWerewolf: boolean;
-  }) => void;
+  SCRYED_PLAYER: (scryed: ScryResult) => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -162,7 +157,7 @@ export default function werewolf(
 
       const isWerewolf = game.scryPlayer(id);
 
-      socket.emit("SCRY_RESULT", { id, isWerewolf });
+      socket.emit("SCRYED_PLAYER", { id, isWerewolf });
 
       game.startDay();
     });
