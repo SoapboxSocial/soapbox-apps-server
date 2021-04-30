@@ -2,13 +2,16 @@ import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
 import Werewolf, { GameAct } from "./werewolf";
 import Player from "./player";
+import sample from "../../util/sample";
 
 export interface WerewolfListenEvents {
-  JOIN_GAME: (user: User) => void;
   CLOSE_GAME: () => void;
-  KILL: (id: string) => void;
+  JOIN_GAME: (user: User) => void;
+  MARK_KILL: (id: string) => void;
+  KILL_MARKED: () => void;
   HEAL: (id: string) => void;
   SCRY: (id: string) => void;
+  SUGGEST_WEREWOLF: (id: string) => void;
 }
 
 export interface WerewolfEmitEvents {
@@ -17,6 +20,7 @@ export interface WerewolfEmitEvents {
   PLAYERS: (players: { [id: string]: Player }) => void;
   ACT: (act: GameAct) => void;
   PLAYER: (player: Player) => void;
+  MARKED_KILLS: (marked: string[]) => void;
   SCRY_RESULT: ({
     id,
     isWerewolf,
@@ -101,14 +105,34 @@ export default function werewolf(
       deleteGame(roomID);
     });
 
-    socket.on("KILL", async (id) => {
+    socket.on("MARK_KILL", async (id) => {
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
         return;
       }
 
-      game.killPlayer(id);
+      game.markPlayer(id);
+
+      const werewolfIDs = game.werewolfIDs;
+
+      const markedIDs = game.markedIDs;
+
+      nsp.in(roomID).to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
+    });
+
+    socket.on("KILL_MARKED", async () => {
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      game.killMarked();
+
+      const werewolfIDs = game.werewolfIDs;
+
+      nsp.in(roomID).to(werewolfIDs).emit("MARKED_KILLS", []);
 
       game.updateAct(GameAct.DOCTOR);
 

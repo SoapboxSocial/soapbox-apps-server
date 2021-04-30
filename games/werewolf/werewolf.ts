@@ -2,6 +2,7 @@ import { User } from "@soapboxsocial/minis.js";
 import { Namespace } from "socket.io";
 import { WerewolfEmitEvents, WerewolfListenEvents } from ".";
 import delay from "../../util/delay";
+import sample from "../../util/sample";
 import Player, { PlayerRole } from "./player";
 
 const ROUND_DURATION = 60 * 3;
@@ -19,15 +20,15 @@ export enum GameAct {
 export default class Werewolf {
   public players: Map<string, Player>;
   public act!: GameAct;
+  public doctorID?: string;
+  public seerID?: string;
+  public werewolfIDs: string[];
+  public markedIDs: string[];
 
   private timeRemaining: number;
   private intervalId!: NodeJS.Timeout;
   private readonly nsp: Namespace<WerewolfListenEvents, WerewolfEmitEvents>;
   private readonly roomID: string;
-
-  private doctorID?: string;
-  private seerID?: string;
-  private werewolfIDs: string[];
 
   constructor(
     roomID: string,
@@ -38,6 +39,7 @@ export default class Werewolf {
     this.players = new Map();
     this.timeRemaining = ROUND_DURATION;
     this.werewolfIDs = [];
+    this.markedIDs = [];
   }
 
   public addPlayer = (id: string, user: User) => {
@@ -54,6 +56,10 @@ export default class Werewolf {
     }
 
     switch (true) {
+      case this.werewolfIDs.length < maxWerewolves:
+        this.werewolfIDs.push(id);
+        role = PlayerRole.WEREWOLF;
+        break;
       case typeof this.doctorID === "undefined":
         this.doctorID = id;
         role = PlayerRole.DOCTOR;
@@ -61,10 +67,6 @@ export default class Werewolf {
       case typeof this.seerID === "undefined":
         this.seerID = id;
         role = PlayerRole.SEER;
-        break;
-      case this.werewolfIDs.length < maxWerewolves:
-        this.werewolfIDs.push(id);
-        role = PlayerRole.WEREWOLF;
         break;
     }
 
@@ -95,6 +97,22 @@ export default class Werewolf {
     }
 
     this.players.delete(id);
+  };
+
+  public markPlayer = (id: string) => {
+    if (this.markedIDs.length === 2) {
+      return;
+    }
+
+    this.markedIDs.push(id);
+  };
+
+  public killMarked = () => {
+    const idToKill = sample(this.markedIDs);
+
+    this.killPlayer(idToKill);
+
+    this.markedIDs = [];
   };
 
   public killPlayer = (id: string) => {
