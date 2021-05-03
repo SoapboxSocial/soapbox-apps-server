@@ -2,6 +2,7 @@ import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
 import Werewolf, { GameAct } from "./werewolf";
 import Player from "./player";
+import delay from "../../util/delay";
 
 type ScryResult = { id: string; isWerewolf: boolean };
 
@@ -12,7 +13,8 @@ export interface WerewolfListenEvents {
   KILL_MARKED: () => void;
   HEAL: (id: string) => void;
   SCRY: (id: string) => void;
-  SUGGEST_WEREWOLF: (id: string) => void;
+  START_GAME: () => void;
+  VOTE: (id: string) => void;
 }
 
 export interface WerewolfEmitEvents {
@@ -23,6 +25,7 @@ export interface WerewolfEmitEvents {
   PLAYER: (player: Player) => void;
   MARKED_KILLS: (marked: string[]) => void;
   SCRYED_PLAYER: (scryed: ScryResult) => void;
+  VOTED_PLAYERS: (voted: string[]) => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -78,17 +81,33 @@ export default function werewolf(
 
         const game = getOrStartGame(roomID, nsp);
 
+        if (typeof game.act !== "undefined") {
+          return;
+        }
+
         game.addPlayer(socketID, user);
 
         const players = Object.fromEntries(game.players.entries());
 
-        socket.emit("PLAYER", players[socketID]);
-
-        socket.emit("ACT", game.act);
-
         nsp.in(roomID).emit("PLAYERS", players);
       } catch (error) {
         console.error(error);
+      }
+    });
+
+    socket.on("START_GAME", () => {
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      if (game.players.size < 6) {
+        return;
+      }
+
+      if (typeof game.act === "undefined") {
+        game.startNight();
       }
     });
 
@@ -114,6 +133,20 @@ export default function werewolf(
       const markedIDs = game.markedIDs;
 
       nsp.in(roomID).to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
+    });
+
+    socket.on("VOTE", async (id) => {
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      game.votePlayer(id);
+
+      const votedPlayers = game.votedIDs;
+
+      nsp.in(roomID).emit("VOTED_PLAYERS", votedPlayers);
     });
 
     socket.on("KILL_MARKED", async () => {
@@ -159,6 +192,8 @@ export default function werewolf(
 
       socket.emit("SCRYED_PLAYER", { id, isWerewolf });
 
+      await delay(5 * 1000);
+
       game.startDay();
     });
 
@@ -176,6 +211,10 @@ export default function werewolf(
       }
 
       game.removePlayer(socketID);
+
+      const players = Object.fromEntries(game.players.entries());
+
+      nsp.in(roomID).emit("PLAYERS", players);
 
       socket.leave(roomID);
     });

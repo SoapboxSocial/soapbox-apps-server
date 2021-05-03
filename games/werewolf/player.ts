@@ -14,13 +14,13 @@ export enum PlayerRole {
 }
 
 export default class Player {
-  readonly role: PlayerRole;
-  readonly user: User;
+  public readonly user: User;
+  public role!: PlayerRole;
   public status: PlayerStatus;
 
-  constructor(user: User, role: PlayerRole) {
+  constructor(user: User) {
     this.user = user;
-    this.role = role;
+
     this.status = PlayerStatus.ALIVE;
   }
 
@@ -30,5 +30,9 @@ export default class Player {
 
   public heal = () => {
     this.status = PlayerStatus.SAVED;
+  };
+
+  public assignRole = (role: PlayerRole) => {
+    this.role = role;
   };
 }
