@@ -216,6 +216,10 @@ export default function werewolf(
 
       nsp.in(roomID).emit("PLAYERS", players);
 
+      if (game.players.size === 0) {
+        deleteGame(roomID);
+      }
+
       socket.leave(roomID);
     });
   });
