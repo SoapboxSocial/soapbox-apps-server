@@ -4,6 +4,7 @@ import { WerewolfEmitEvents, WerewolfListenEvents } from ".";
 import delay from "../../util/delay";
 import sample from "../../util/sample";
 import Player, { PlayerRole } from "./player";
+import shuffle from "lodash.shuffle";
 
 const ROUND_DURATION = 60 * 3;
 
@@ -120,7 +121,9 @@ export default class Werewolf {
   public startNight = async () => {
     this.act = GameAct.START_ROUND;
 
-    this.players.forEach((player, playerSocketID) => {
+    const shuffledPlayers = shuffle(Array.from(this.players));
+
+    shuffledPlayers.forEach(([playerSocketID, player]) => {
       if (typeof player.role === "undefined") {
         let role: PlayerRole = PlayerRole.VILLAGER;
 
@@ -203,14 +206,18 @@ export default class Werewolf {
 
       const didWerewolvesWin = werewolves.length === villagers.length;
 
-      if (this.timeRemaining <= 0 && !didVillagersWin && !didWerewolvesWin) {
+      if (didVillagersWin || didVillagersWin) {
+        this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
+
+        return;
+      }
+
+      if (this.timeRemaining <= 0) {
         clearInterval(this.intervalId);
 
         this.startNight();
-      } else {
-        this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
       }
-    });
+    }, 1000);
   };
 
   public stop = (winner: "VILLAGER" | "WEREWOLF") => {
