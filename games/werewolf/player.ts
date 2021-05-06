@@ -15,7 +15,7 @@ export enum PlayerRole {
 
 export default class Player {
   public readonly user: User;
-  public role!: PlayerRole;
+  public role?: PlayerRole;
   public status: PlayerStatus;
 
   constructor(user: User) {

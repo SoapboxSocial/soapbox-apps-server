@@ -26,6 +26,7 @@ export interface WerewolfEmitEvents {
   MARKED_KILLS: (marked: string[]) => void;
   SCRYED_PLAYER: (scryed: ScryResult) => void;
   VOTED_PLAYERS: (voted: string[]) => void;
+  NIGHT_SUMMARY: (summary: { healed?: Player; killed?: Player }) => void;
 }
 
 const games = new Map<string, Werewolf>();
@@ -132,7 +133,7 @@ export default function werewolf(
 
       const markedIDs = game.markedIDs;
 
-      nsp.in(roomID).to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
+      nsp.to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
     });
 
     socket.on("VOTE", async (id) => {
@@ -160,7 +161,7 @@ export default function werewolf(
 
       const werewolfIDs = game.werewolfIDs;
 
-      nsp.in(roomID).to(werewolfIDs).emit("MARKED_KILLS", []);
+      nsp.to(werewolfIDs).emit("MARKED_KILLS", []);
 
       game.updateAct(GameAct.DOCTOR);
 

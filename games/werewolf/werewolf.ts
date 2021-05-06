@@ -3,7 +3,7 @@ import { Namespace } from "socket.io";
 import { WerewolfEmitEvents, WerewolfListenEvents } from ".";
 import delay from "../../util/delay";
 import sample from "../../util/sample";
-import Player, { PlayerRole } from "./player";
+import Player, { PlayerRole, PlayerStatus } from "./player";
 import shuffle from "lodash.shuffle";
 
 const ROUND_DURATION = 60 * 3;
@@ -12,6 +12,7 @@ export enum GameAct {
   DAY = "DAY",
   DOCTOR = "DOCTOR",
   NIGHT = "NIGHT",
+  NIGHT_SUMMARY = "NIGHT_SUMMARY",
   SEER = "SEER",
   START_ROUND = "START_ROUND",
   VILLAGER = "VILLAGER",
@@ -27,6 +28,9 @@ export default class Werewolf {
   public werewolfIDs: string[];
   public markedIDs: string[];
   public votedIDs: string[];
+  public roundNumber: number;
+  public healedThisRound?: Player;
+  public killedThisRound?: Player;
 
   private timeRemaining: number;
   private intervalId!: NodeJS.Timeout;
@@ -44,6 +48,7 @@ export default class Werewolf {
     this.werewolfIDs = [];
     this.markedIDs = [];
     this.votedIDs = [];
+    this.roundNumber = 0;
   }
 
   public addPlayer = (id: string, user: User) => {
@@ -92,6 +97,8 @@ export default class Werewolf {
     }
 
     player.kill();
+
+    this.killedThisRound = player;
   };
 
   public healPlayer = (id: string) => {
@@ -101,7 +108,11 @@ export default class Werewolf {
       return;
     }
 
-    player.heal();
+    if (player.status === PlayerStatus.DEAD) {
+      player.heal();
+
+      this.healedThisRound = player;
+    }
   };
 
   public scryPlayer = (id: string) => {
@@ -119,23 +130,30 @@ export default class Werewolf {
   };
 
   public startNight = async () => {
+    this.roundNumber = this.roundNumber + 1;
+    this.killedThisRound = undefined;
+    this.healedThisRound = undefined;
     this.act = GameAct.START_ROUND;
 
-    const shuffledPlayers = shuffle(Array.from(this.players));
+    if (
+      Array.from(this.players.values()).filter(
+        (player) => typeof player?.role === "undefined"
+      ).length > 0
+    ) {
+      const shuffledPlayers = shuffle(Array.from(this.players));
 
-    shuffledPlayers.forEach(([playerSocketID, player]) => {
-      if (typeof player.role === "undefined") {
+      let maxWerewolves = 2;
+      switch (true) {
+        case this.players.size > 8:
+          maxWerewolves = 3;
+          break;
+        case this.players.size > 12:
+          maxWerewolves = 4;
+          break;
+      }
+
+      shuffledPlayers.forEach(([playerSocketID, player]) => {
         let role: PlayerRole = PlayerRole.VILLAGER;
-
-        let maxWerewolves = 2;
-        switch (true) {
-          case this.players.size > 8:
-            maxWerewolves = 3;
-            break;
-          case this.players.size > 12:
-            maxWerewolves = 4;
-            break;
-        }
 
         switch (true) {
           case this.werewolfIDs.length < maxWerewolves:
@@ -153,14 +171,18 @@ export default class Werewolf {
         }
 
         player.assignRole(role);
-      }
 
-      this.nsp.to(playerSocketID).emit("PLAYER", player);
-    });
+        this.nsp.to(playerSocketID).emit("PLAYER", player);
+      });
 
-    this.nsp.in(this.roomID).emit("ACT", GameAct.START_ROUND);
+      const players = Object.fromEntries(this.players.entries());
 
-    await delay(5 * 1000);
+      this.nsp.in(this.roomID).emit("PLAYERS", players);
+
+      this.nsp.in(this.roomID).emit("ACT", GameAct.START_ROUND);
+
+      await delay(5 * 1000);
+    }
 
     this.act = GameAct.NIGHT;
 
@@ -174,7 +196,20 @@ export default class Werewolf {
   };
 
   public startDay = async () => {
+    this.timeRemaining = ROUND_DURATION;
+
     clearInterval(this.intervalId);
+
+    this.act === GameAct.NIGHT_SUMMARY;
+
+    console.log({
+      healedThisRound: this.healedThisRound,
+      killedThisRound: this.killedThisRound,
+    });
+
+    this.nsp.in(this.roomID).emit("ACT", GameAct.NIGHT_SUMMARY);
+
+    await delay(2 * 1000);
 
     this.act = GameAct.DAY;
 
