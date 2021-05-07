@@ -202,9 +202,9 @@ export default class Werewolf {
 
     this.act === GameAct.NIGHT_SUMMARY;
 
-    console.log({
-      healedThisRound: this.healedThisRound,
-      killedThisRound: this.killedThisRound,
+    this.nsp.in(this.roomID).emit("NIGHT_SUMMARY", {
+      healed: this?.healedThisRound,
+      killed: this?.killedThisRound,
     });
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.NIGHT_SUMMARY);
