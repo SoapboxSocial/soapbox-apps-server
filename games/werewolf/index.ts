@@ -10,7 +10,6 @@ export interface WerewolfListenEvents {
   CLOSE_GAME: () => void;
   JOIN_GAME: (user: User) => void;
   MARK_KILL: (id: string) => void;
-  KILL_MARKED: () => void;
   HEAL: (id: string) => void;
   SCRY: (id: string) => void;
   START_GAME: () => void;
@@ -134,6 +133,16 @@ export default function werewolf(
       const markedIDs = game.markedIDs;
 
       nsp.to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
+
+      if (game.markedIDs.length === game.werewolfIDs.length) {
+        game.killMarked();
+
+        nsp.to(werewolfIDs).emit("MARKED_KILLS", []);
+
+        game.updateAct(GameAct.DOCTOR);
+
+        nsp.in(roomID).emit("ACT", GameAct.DOCTOR);
+      }
     });
 
     socket.on("VOTE", async (id) => {
@@ -148,24 +157,6 @@ export default function werewolf(
       const votedPlayers = game.votedIDs;
 
       nsp.in(roomID).emit("VOTED_PLAYERS", votedPlayers);
-    });
-
-    socket.on("KILL_MARKED", async () => {
-      const game = games.get(roomID);
-
-      if (typeof game === "undefined") {
-        return;
-      }
-
-      game.killMarked();
-
-      const werewolfIDs = game.werewolfIDs;
-
-      nsp.to(werewolfIDs).emit("MARKED_KILLS", []);
-
-      game.updateAct(GameAct.DOCTOR);
-
-      nsp.in(roomID).emit("ACT", GameAct.DOCTOR);
     });
 
     socket.on("HEAL", async (id) => {

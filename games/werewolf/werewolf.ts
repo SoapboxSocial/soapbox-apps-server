@@ -74,7 +74,7 @@ export default class Werewolf {
   };
 
   public markPlayer = (id: string) => {
-    if (this.markedIDs.length === 2) {
+    if (this.markedIDs.length === this.werewolfIDs.length) {
       return;
     }
 
