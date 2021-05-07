@@ -18,6 +18,17 @@ export enum GameAct {
   VILLAGER = "VILLAGER",
   VOTING = "VOTING",
   WEREWOLF = "WEREWOLF",
+  DAY_SUMMARY = "DAY_SUMMARY",
+}
+
+function mostFrequent(array: string[]) {
+  return [...array]
+    .sort(
+      (a, b) =>
+        array.filter((v) => v === a).length -
+        array.filter((v) => v === b).length
+    )
+    .pop() as string;
 }
 
 export default class Werewolf {
@@ -125,12 +136,33 @@ export default class Werewolf {
     return player.role === PlayerRole.WEREWOLF;
   };
 
-  public votePlayer = (id: string) => {
+  public votePlayer = async (id: string) => {
     this.votedIDs.push(id);
+
+    if (this.votedIDs.length === this.players.size) {
+      const highestVotedID = mostFrequent(this.votedIDs);
+
+      this.killPlayer(highestVotedID);
+
+      clearInterval(this.intervalId);
+
+      this.act === GameAct.DAY_SUMMARY;
+
+      this.nsp.in(this.roomID).emit("DAY_SUMMARY", {
+        killed: this.players.get(highestVotedID) as Player,
+      });
+
+      this.nsp.in(this.roomID).emit("ACT", GameAct.DAY_SUMMARY);
+
+      await delay(2 * 1000);
+
+      this.startNight();
+    }
   };
 
   public startNight = async () => {
     this.roundNumber = this.roundNumber + 1;
+    this.votedIDs = [];
     this.killedThisRound = undefined;
     this.healedThisRound = undefined;
     this.act = GameAct.START_ROUND;

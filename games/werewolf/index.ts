@@ -4,7 +4,10 @@ import Werewolf, { GameAct } from "./werewolf";
 import Player from "./player";
 import delay from "../../util/delay";
 
-type ScryResult = { id: string; isWerewolf: boolean };
+type ScryResult = {
+  id: string;
+  isWerewolf: boolean;
+};
 
 export interface WerewolfListenEvents {
   CLOSE_GAME: () => void;
@@ -26,6 +29,7 @@ export interface WerewolfEmitEvents {
   SCRYED_PLAYER: (scryed: ScryResult) => void;
   VOTED_PLAYERS: (voted: string[]) => void;
   NIGHT_SUMMARY: (summary: { healed?: Player; killed?: Player }) => void;
+  DAY_SUMMARY: (summary: { killed: Player }) => void;
 }
 
 const games = new Map<string, Werewolf>();
