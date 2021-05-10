@@ -3,6 +3,7 @@ import sampleSize from "lodash.samplesize";
 import { Namespace, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
+import { postScores, GameTokens } from "../../lib/scores";
 import delay from "../../util/delay";
 import sample from "../../util/sample";
 
@@ -193,18 +194,23 @@ export default class Draw {
     this.canvasTimestamp = Date.now();
   };
 
-  getHighScores = () => {
+  getHighScores = async () => {
     const userArray = Array.from(this.players.values());
 
     const scoresArray = Object.entries(this.scores).map(([username, score]) => {
-      const user = userArray.find((el) => el.username === username);
+      const user = userArray.find((el) => el.username === username) as User;
 
       return {
-        id: user?.id ?? "username",
-        display_name: user?.display_name ?? user?.username ?? "User",
+        id: user.id,
+        display_name: user?.display_name ?? user.username,
         score,
       };
     });
+
+    await postScores(
+      Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
+      GameTokens.DRAW_WITH_FRIENDS
+    );
 
     const scoresArrayDesc = scoresArray.sort((a, b) => b.score - a.score);
 
