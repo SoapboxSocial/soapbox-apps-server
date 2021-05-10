@@ -234,6 +234,20 @@ export default class Werewolf {
 
     this.nsp.in(this.roomID).emit("PLAYERS", players);
 
+    const villagers = this.getVillagers();
+
+    const werewolves = this.getWerewolves();
+
+    const didVillagersWin = werewolves.length === 0;
+
+    const didWerewolvesWin = werewolves.length - 1 === villagers.length;
+
+    if (didWerewolvesWin || didVillagersWin) {
+      this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
+
+      return;
+    }
+
     this.act = GameAct.VOTING;
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.VOTING);
@@ -276,14 +290,7 @@ export default class Werewolf {
 
         const didWerewolvesWin = werewolves.length - 1 === villagers.length;
 
-        console.log({
-          villagers: villagers.length,
-          werewolves: werewolves.length,
-          didVillagersWin,
-          didWerewolvesWin,
-        });
-
-        if (didVillagersWin || didVillagersWin) {
+        if (didWerewolvesWin || didVillagersWin) {
           this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
 
           return;

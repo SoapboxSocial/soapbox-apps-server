@@ -12,7 +12,7 @@ type ScryResult = {
 export interface WerewolfListenEvents {
   CLOSE_GAME: () => void;
   JOIN_GAME: (user: User) => void;
-  MARK_KILL: (id: string) => void;
+  MARK: (id: string) => void;
   HEAL: (id: string) => void;
   SCRY: (id: string) => void;
   START_GAME: () => void;
@@ -141,7 +141,7 @@ export default function werewolf(
       }
     });
 
-    socket.on("MARK_KILL", async (id) => {
+    socket.on("MARK", async (id) => {
       const game = games.get(roomID);
 
       if (typeof game === "undefined") {
