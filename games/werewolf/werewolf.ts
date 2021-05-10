@@ -19,6 +19,7 @@ export enum GameAct {
   VOTING = "VOTING",
   WEREWOLF = "WEREWOLF",
   DAY_SUMMARY = "DAY_SUMMARY",
+  GAME_OVER = "GAME_OVER",
 }
 
 function mostFrequent(array: string[]) {
@@ -242,7 +243,11 @@ export default class Werewolf {
 
       this.nsp.in(this.roomID).emit("TIME", this.timeRemaining);
 
-      if (this.votedIDs.length === this.players.size) {
+      const alivePlayers = Array.from(this.players.values()).filter(
+        (player) => player.status !== PlayerStatus.DEAD
+      );
+
+      if (this.votedIDs.length === alivePlayers.length) {
         const highestVotedID = mostFrequent(this.votedIDs);
 
         this.killPlayer(highestVotedID);
@@ -269,7 +274,14 @@ export default class Werewolf {
 
         const didVillagersWin = werewolves.length === 0;
 
-        const didWerewolvesWin = werewolves.length === villagers.length;
+        const didWerewolvesWin = werewolves.length - 1 === villagers.length;
+
+        console.log({
+          villagers: villagers.length,
+          werewolves: werewolves.length,
+          didVillagersWin,
+          didWerewolvesWin,
+        });
 
         if (didVillagersWin || didVillagersWin) {
           this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
@@ -283,20 +295,6 @@ export default class Werewolf {
       if (this.timeRemaining <= 0) {
         clearInterval(this.intervalId);
 
-        const villagers = this.getVillagers();
-
-        const werewolves = this.getWerewolves();
-
-        const didVillagersWin = werewolves.length === 0;
-
-        const didWerewolvesWin = werewolves.length === villagers.length;
-
-        if (didVillagersWin || didVillagersWin) {
-          this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
-
-          return;
-        }
-
         this.startNight();
       }
     }, 1000);
@@ -305,6 +303,8 @@ export default class Werewolf {
   public stop = (winner: "VILLAGER" | "WEREWOLF") => {
     clearInterval(this.intervalId);
 
+    this.nsp.in(this.roomID).emit("ACT", GameAct.GAME_OVER);
+
     this.nsp.in(this.roomID).emit("WINNER", winner);
   };
 
@@ -312,7 +312,7 @@ export default class Werewolf {
     const villagers = Array.from(this.players.values()).filter(
       (player) =>
         player.role !== PlayerRole.WEREWOLF &&
-        player.status === PlayerStatus.ALIVE
+        player.status !== PlayerStatus.DEAD
     );
 
     return villagers;
@@ -322,7 +322,7 @@ export default class Werewolf {
     const werewolves = Array.from(this.players.values()).filter(
       (player) =>
         player.role === PlayerRole.WEREWOLF &&
-        player.status === PlayerStatus.ALIVE
+        player.status !== PlayerStatus.DEAD
     );
 
     return werewolves;

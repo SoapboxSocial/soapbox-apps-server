@@ -210,9 +210,11 @@ export default function werewolf(
 
       const isWerewolf = game.scryPlayer(id);
 
-      socket.emit("SCRYED_PLAYER", { id, isWerewolf });
+      if (isWerewolf) {
+        socket.emit("SCRYED_PLAYER", { id, isWerewolf });
 
-      await delay(5 * 1000);
+        await delay(3 * 1000);
+      }
 
       game.startDay();
     });
