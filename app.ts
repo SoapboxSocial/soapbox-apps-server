@@ -8,6 +8,7 @@ import drawWithFriends from "./games/draw";
 import polls from "./games/polls";
 import randomMember from "./games/random";
 import trivia from "./games/trivia";
+import werewolf from "./games/werewolf";
 import wouldYouRather from "./games/would-you-rather";
 
 require("dotenv").config();
@@ -57,3 +58,5 @@ birds(io);
 wouldYouRather(io);
 
 trivia(io);
+
+werewolf(io);
