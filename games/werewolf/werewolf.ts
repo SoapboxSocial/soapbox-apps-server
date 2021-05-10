@@ -138,26 +138,6 @@ export default class Werewolf {
 
   public votePlayer = async (id: string) => {
     this.votedIDs.push(id);
-
-    if (this.votedIDs.length === this.players.size) {
-      const highestVotedID = mostFrequent(this.votedIDs);
-
-      this.killPlayer(highestVotedID);
-
-      clearInterval(this.intervalId);
-
-      this.act === GameAct.DAY_SUMMARY;
-
-      this.nsp.in(this.roomID).emit("DAY_SUMMARY", {
-        killed: this.players.get(highestVotedID) as Player,
-      });
-
-      this.nsp.in(this.roomID).emit("ACT", GameAct.DAY_SUMMARY);
-
-      await delay(2 * 1000);
-
-      this.startNight();
-    }
   };
 
   public startNight = async () => {
@@ -166,6 +146,8 @@ export default class Werewolf {
     this.killedThisRound = undefined;
     this.healedThisRound = undefined;
     this.act = GameAct.START_ROUND;
+
+    this.nsp.in(this.roomID).emit("VOTED_PLAYERS", []);
 
     if (
       Array.from(this.players.values()).filter(
@@ -203,8 +185,6 @@ export default class Werewolf {
         }
 
         player.assignRole(role);
-
-        this.nsp.to(playerSocketID).emit("PLAYER", player);
       });
 
       const players = Object.fromEntries(this.players.entries());
@@ -241,13 +221,13 @@ export default class Werewolf {
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.NIGHT_SUMMARY);
 
-    await delay(2 * 1000);
+    await delay(3 * 1000);
 
     this.act = GameAct.DAY;
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.DAY);
 
-    await delay(2 * 1000);
+    await delay(3 * 1000);
 
     const players = Object.fromEntries(this.players.entries());
 
@@ -257,30 +237,65 @@ export default class Werewolf {
 
     this.nsp.in(this.roomID).emit("ACT", GameAct.VOTING);
 
-    // 5a. Handle What Happened In The Night (Who Was Killed, Who Was Protected)
-
-    // 5b. Start Day Cycle
-    this.intervalId = setInterval(() => {
+    this.intervalId = setInterval(async () => {
       this.timeRemaining = this.timeRemaining - 1;
 
       this.nsp.in(this.roomID).emit("TIME", this.timeRemaining);
 
-      const villagers = this.getVillagers();
+      if (this.votedIDs.length === this.players.size) {
+        const highestVotedID = mostFrequent(this.votedIDs);
 
-      const werewolves = this.getWerewolves();
+        this.killPlayer(highestVotedID);
 
-      const didVillagersWin = werewolves.length === 0;
+        clearInterval(this.intervalId);
 
-      const didWerewolvesWin = werewolves.length === villagers.length;
+        this.act === GameAct.DAY_SUMMARY;
 
-      if (didVillagersWin || didVillagersWin) {
-        this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
+        this.nsp.in(this.roomID).emit("DAY_SUMMARY", {
+          killed: this.players.get(highestVotedID) as Player,
+        });
 
-        return;
+        this.nsp.in(this.roomID).emit("ACT", GameAct.DAY_SUMMARY);
+
+        const players = Object.fromEntries(this.players.entries());
+
+        this.nsp.in(this.roomID).emit("PLAYERS", players);
+
+        await delay(3 * 1000);
+
+        const villagers = this.getVillagers();
+
+        const werewolves = this.getWerewolves();
+
+        const didVillagersWin = werewolves.length === 0;
+
+        const didWerewolvesWin = werewolves.length === villagers.length;
+
+        if (didVillagersWin || didVillagersWin) {
+          this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
+
+          return;
+        }
+
+        this.startNight();
       }
 
       if (this.timeRemaining <= 0) {
         clearInterval(this.intervalId);
+
+        const villagers = this.getVillagers();
+
+        const werewolves = this.getWerewolves();
+
+        const didVillagersWin = werewolves.length === 0;
+
+        const didWerewolvesWin = werewolves.length === villagers.length;
+
+        if (didVillagersWin || didVillagersWin) {
+          this.stop(didWerewolvesWin ? "WEREWOLF" : "VILLAGER");
+
+          return;
+        }
 
         this.startNight();
       }
@@ -295,7 +310,9 @@ export default class Werewolf {
 
   private getVillagers = () => {
     const villagers = Array.from(this.players.values()).filter(
-      (player) => player.role !== PlayerRole.WEREWOLF
+      (player) =>
+        player.role !== PlayerRole.WEREWOLF &&
+        player.status === PlayerStatus.ALIVE
     );
 
     return villagers;
@@ -303,7 +320,9 @@ export default class Werewolf {
 
   private getWerewolves = () => {
     const werewolves = Array.from(this.players.values()).filter(
-      (player) => player.role === PlayerRole.WEREWOLF
+      (player) =>
+        player.role === PlayerRole.WEREWOLF &&
+        player.status === PlayerStatus.ALIVE
     );
 
     return werewolves;

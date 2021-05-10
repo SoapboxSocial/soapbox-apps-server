@@ -1,7 +1,7 @@
 import { User } from "@soapboxsocial/minis.js";
 import { Namespace, Server } from "socket.io";
 import Werewolf, { GameAct } from "./werewolf";
-import Player from "./player";
+import Player, { PlayerRole, PlayerStatus } from "./player";
 import delay from "../../util/delay";
 
 type ScryResult = {
@@ -17,6 +17,7 @@ export interface WerewolfListenEvents {
   SCRY: (id: string) => void;
   START_GAME: () => void;
   VOTE: (id: string) => void;
+  END_TURN: (role: GameAct) => void;
 }
 
 export interface WerewolfEmitEvents {
@@ -24,7 +25,6 @@ export interface WerewolfEmitEvents {
   WINNER: (winner: "VILLAGER" | "WEREWOLF") => void;
   PLAYERS: (players: { [id: string]: Player }) => void;
   ACT: (act: GameAct) => void;
-  PLAYER: (player: Player) => void;
   MARKED_KILLS: (marked: string[]) => void;
   SCRYED_PLAYER: (scryed: ScryResult) => void;
   VOTED_PLAYERS: (voted: string[]) => void;
@@ -123,6 +123,24 @@ export default function werewolf(
       deleteGame(roomID);
     });
 
+    socket.on("END_TURN", async (role) => {
+      const game = games.get(roomID);
+
+      if (typeof game === "undefined") {
+        return;
+      }
+
+      if (role === GameAct.DOCTOR) {
+        game.updateAct(GameAct.SEER);
+
+        nsp.in(roomID).emit("ACT", GameAct.SEER);
+      }
+
+      if (role === GameAct.SEER) {
+        game.startDay();
+      }
+    });
+
     socket.on("MARK_KILL", async (id) => {
       const game = games.get(roomID);
 
@@ -138,7 +156,13 @@ export default function werewolf(
 
       nsp.to(werewolfIDs).emit("MARKED_KILLS", markedIDs);
 
-      if (game.markedIDs.length === game.werewolfIDs.length) {
+      const aliveWerewolves = Array.from(game.players.values()).filter(
+        (player) =>
+          player.role === PlayerRole.WEREWOLF &&
+          player.status === PlayerStatus.ALIVE
+      );
+
+      if (game.markedIDs.length === aliveWerewolves.length) {
         game.killMarked();
 
         nsp.to(werewolfIDs).emit("MARKED_KILLS", []);
