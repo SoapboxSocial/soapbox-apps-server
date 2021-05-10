@@ -18,6 +18,7 @@
     "isomorphic-unfetch": "^3.1.0",
     "lodash.samplesize": "^4.2.0",
     "lodash.shuffle": "^4.2.0",
+    "node-fetch": "^2.6.1",
     "socket.io": "^4.0.1"
   },
   "devDependencies": {
