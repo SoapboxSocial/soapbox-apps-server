@@ -13,7 +13,7 @@ export async function postScores(
   roomID: string
 ) {
   const r = await fetch(
-    SERVER_BASE + "/v1/minis/scores?token=" + token + "&roomID=" + roomID,
+    SERVER_BASE + "/v1/minis/scores?token=" + token + "&room=" + roomID,
     {
       method: "POST",
       headers: {
