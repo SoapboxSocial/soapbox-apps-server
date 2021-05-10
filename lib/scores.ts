@@ -9,19 +9,23 @@ export enum GameTokens {
 
 export async function postScores(
   scores: Record<number, number>,
-  token: GameTokens
+  token: GameTokens,
+  roomID: string
 ) {
-  const r = await fetch(SERVER_BASE + "/v1/minis/scores?token=" + token, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(scores),
-  });
+  const r = await fetch(
+    SERVER_BASE + "/v1/minis/scores?token=" + token + "&roomID=" + roomID,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(scores),
+    }
+  );
 
   if (r.ok) {
     return;
   }
 
-  throw new Error(r.statusText);
+  console.error(r.statusText);
 }

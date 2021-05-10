@@ -78,7 +78,7 @@ export default class Draw {
     clearInterval(this.intervalId);
 
     // Send Scores
-    const scores = this.getHighScores();
+    const scores = await this.getHighScores();
 
     this.nsp.in(this.roomID).emit("SEND_SCORES", scores);
 
@@ -209,7 +209,8 @@ export default class Draw {
 
     await postScores(
       Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
-      GameTokens.DRAW_WITH_FRIENDS
+      GameTokens.DRAW_WITH_FRIENDS,
+      this.roomID
     );
 
     const scoresArrayDesc = scoresArray.sort((a, b) => b.score - a.score);
