@@ -31,7 +31,7 @@ async function deleteGame(roomID: string) {
     return;
   }
 
-  instance.stop();
+  await instance.stop();
 
   games.delete(roomID);
 }

@@ -3,7 +3,7 @@ import sampleSize from "lodash.samplesize";
 import { Namespace, Socket } from "socket.io";
 import { DrawEmitEvents, DrawListenEvents } from ".";
 import wordList from "../../data/word-list";
-import { postScores, GameTokens } from "../../lib/scores";
+import { GameTokens, postScores } from "../../lib/scores";
 import delay from "../../util/delay";
 import sample from "../../util/sample";
 
@@ -44,8 +44,16 @@ export default class Draw {
 
   start = () => {};
 
-  stop = () => {
+  stop = async () => {
     clearInterval(this.intervalId);
+
+    const scoresArray = await this.getHighScores();
+
+    await postScores(
+      Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
+      GameTokens.DRAW_WITH_FRIENDS,
+      this.roomID
+    );
   };
 
   newRound = async () => {
@@ -206,12 +214,6 @@ export default class Draw {
         score,
       };
     });
-
-    await postScores(
-      Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
-      GameTokens.DRAW_WITH_FRIENDS,
-      this.roomID
-    );
 
     const scoresArrayDesc = scoresArray.sort((a, b) => b.score - a.score);
 
