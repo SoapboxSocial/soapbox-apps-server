@@ -1,4 +1,5 @@
-import { Namespace } from "socket.io";
+import { User } from "@soapboxsocial/minis.js";
+import { Namespace, Socket } from "socket.io";
 import { TriviaEmitEvents, TriviaListenEvents } from ".";
 import {
   DifficultyOptions,
@@ -7,38 +8,40 @@ import {
   Question,
   Vote,
 } from "../../lib/opentdb";
+import { GameTokens, postScores } from "../../lib/scores";
 import delay from "../../util/delay";
 import sample from "../../util/sample";
 
 export default class Trivia {
   private readonly roomID: string;
   private nsp: Namespace<TriviaListenEvents, TriviaEmitEvents>;
-  private sessionToken!: string;
-  private category: string;
-  private difficulty: DifficultyOptions;
+  public sessionToken?: string;
+  private category?: string;
+  private difficulty?: DifficultyOptions;
   private active!: Question;
   private questions: Question[];
   private votes: Vote[];
-  private scores: { [key: string]: number };
+  private scores: Record<string, number>;
   private isGameLoopRunning: boolean;
+  private players: Map<string, User>;
 
   constructor(
     roomID: string,
-    category: string,
-    difficulty: DifficultyOptions,
     nsp: Namespace<TriviaListenEvents, TriviaEmitEvents>
   ) {
     this.roomID = roomID;
     this.nsp = nsp;
-    this.category = category;
-    this.difficulty = difficulty;
     this.questions = [];
     this.votes = [];
+    this.players = new Map();
     this.scores = {};
     this.isGameLoopRunning = false;
   }
 
-  public start = async () => {
+  public start = async (category: string, difficulty: DifficultyOptions) => {
+    this.category = category;
+    this.difficulty = difficulty;
+
     this.sessionToken = await getSessionToken();
 
     this.questions = await getQuestions(
@@ -55,7 +58,7 @@ export default class Trivia {
     this.difficulty = difficulty;
 
     this.questions = await getQuestions(
-      this.sessionToken,
+      this.sessionToken as string,
       this.category,
       this.difficulty
     );
@@ -65,19 +68,33 @@ export default class Trivia {
     }
   };
 
-  public vote = (vote: Vote) => {
-    this.votes.push(vote);
+  public stop = async () => {
+    const scoresArray = this.getHighScores();
 
-    const display_name = vote.user.display_name;
+    await postScores(
+      Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
+      GameTokens.TRIVIA,
+      this.roomID
+    );
+  };
+
+  public vote = (socketID: string, vote: Vote) => {
+    const user = this.players.get(socketID);
+
+    if (typeof user === "undefined") {
+      return;
+    }
+
+    this.votes.push(vote);
 
     const isCorrect = vote.answer === this.active.correct_answer;
 
-    if (Object.prototype.hasOwnProperty.call(this.scores, display_name)) {
-      this.scores[display_name] = this.scores[display_name] += isCorrect
-        ? 100
-        : 0;
+    const points = isCorrect ? 100 : 0;
+
+    if (Object.prototype.hasOwnProperty.call(this.scores, user.username)) {
+      this.scores[user.username] = this.scores[user.username] += points;
     } else {
-      this.scores[display_name] = isCorrect ? 100 : 0;
+      this.scores[user.username] = points;
     }
 
     this.nsp.in(this.roomID).emit("VOTES", this.votes);
@@ -124,17 +141,33 @@ export default class Trivia {
   };
 
   private getHighScores = () => {
-    const scoresArray = Object.entries(this.scores).map(
-      ([display_name, score]) => {
-        return {
-          display_name,
-          score,
-        };
-      }
-    );
+    const userArray = Array.from(this.players.values());
+
+    const scoresArray = Object.entries(this.scores).map(([username, score]) => {
+      const user = userArray.find((el) => el.username === username) as User;
+
+      return {
+        id: user.id,
+        display_name: user?.display_name ?? user.username,
+        score,
+      };
+    });
 
     const scoresArrayDesc = scoresArray.sort((a, b) => b.score - a.score);
 
     return scoresArrayDesc;
+  };
+
+  public addPlayer = (
+    socket: Socket<TriviaListenEvents, TriviaEmitEvents>,
+    user: User
+  ) => {
+    const socketID = socket.id;
+
+    this.players.set(socketID, user);
+  };
+
+  public removePlayer = (socketID: string) => {
+    this.players.delete(socketID);
   };
 }
