@@ -1,6 +1,4 @@
-import { Socket } from "socket.io";
 import { constants as Const, PlayerStateEnum } from "./constants";
-import { BirdsEmitEvents, BirdsListenEvents } from ".";
 
 // Defines
 const MAX_BIRDS_IN_A_ROW = 3;
@@ -28,17 +26,13 @@ export type PlayerTinyObject = {
 };
 
 export default class Player {
-  private _socket: Socket<BirdsListenEvents, BirdsEmitEvents>;
+  private _socket: any;
   private _speedY: number;
   private _rank: number;
   private _lastPipe: number;
   private _playerTinyObject: PlayerTinyObject;
 
-  constructor(
-    socket: Socket<BirdsListenEvents, BirdsEmitEvents>,
-    uid: string,
-    color: number
-  ) {
+  constructor(socket: any, uid: string, color: number) {
     this._socket = socket;
     this._speedY = 0;
     this._rank = 1;
