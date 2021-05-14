@@ -121,9 +121,9 @@ export default function trivia(
     socket.on("CLOSE_GAME", async () => {
       console.log("[trivia]", "[CLOSE_GAME]");
 
-      nsp.in(roomID).disconnectSockets(true);
-
       await deleteGame(roomID);
+
+      nsp.in(roomID).disconnectSockets(true);
     });
 
     socket.on("disconnect", (reason) => {
