@@ -1,32 +1,34 @@
 import { Server } from "socket.io";
 import Game from "./game";
 
-type GamesMap = {
-  [key: string]: Game;
-};
+const games = new Map<string, Game>();
 
-let games: GamesMap = {};
+function getOrCreateGame(roomID: string) {
+  const instance = games.get(roomID);
 
-function getOrCreateGame(room: string) {
-  if (!(room in games)) {
+  if (typeof instance === "undefined") {
     let game = new Game();
 
     game.start();
 
-    games[room] = game;
+    games.set(roomID, game);
+
+    return game;
   }
 
-  return games[room];
+  return instance;
 }
 
-function deleteGame(room: string) {
-  if (!(room in games)) {
+function deleteGame(roomID: string) {
+  const instance = games.get(roomID);
+
+  if (typeof instance === "undefined") {
     return;
   }
 
-  games[room].stop();
+  instance.stop();
 
-  delete games[room];
+  games.delete(roomID);
 }
 
 export default function birds(io: Server) {
