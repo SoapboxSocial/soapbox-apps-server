@@ -1,5 +1,4 @@
-import { Namespace, Socket } from "socket.io";
-import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { Socket } from "socket.io";
 import { checkCollision } from "./collisionEngine";
 import {
   constants as Const,
@@ -11,18 +10,19 @@ import { PlayerTinyObject } from "./player";
 import PlayersManager from "./playersManager";
 
 export default class Game {
-  public roomID: string;
-  public nsp: Namespace<BirdsListenEvents, BirdsEmitEvents>;
-  public playersManager: PlayersManager;
+  private playersManager: PlayersManager;
   private pipeManager: PipeManager;
-  public state: ServerStateEnum;
+  private state: ServerStateEnum;
   private timeStartGame: number;
   private lastTime: number | null;
   private timer: NodeJS.Timeout | null;
 
-  constructor(roomID: string, nsp: Namespace) {
-    this.nsp = nsp;
-    this.roomID = roomID;
+  /**
+   * Array of sockets (users)
+   */
+  private sockets: Socket[] = [];
+
+  constructor() {
     this.playersManager = new PlayersManager();
     this.pipeManager = new PipeManager();
     this.state = ServerStateEnum.WaitingForPlayers;
@@ -31,9 +31,17 @@ export default class Game {
     this.timeStartGame = 0;
   }
 
-  public stop = async () => {};
+  stop() {
+    this.sockets.forEach((i) => i.disconnect());
+  }
 
-  public start = () => {
+  broadcast(from: any, event: string, data: any) {
+    this.sockets
+      .filter((i) => i.id != from)
+      .forEach((i) => i.emit(event, data));
+  }
+
+  start() {
     this.playersManager.on("players-ready", () => {
       console.log("[birds]", "players ready, start game!");
 
@@ -46,9 +54,48 @@ export default class Game {
       // Create a pipe and send it to clients
       this.pipeManager.newPipe();
     });
-  };
+  }
 
-  private updateGameState(newState: ServerStateEnum, notifyClients: boolean) {
+  handle(socket: Socket) {
+    // Add new player to the array of users
+    this.sockets.push(socket);
+
+    // Create a new player for the current socket
+    this.playersManager.addNewPlayer(socket, socket.id);
+
+    // Register to socket events
+    socket.on("disconnect", (reason) => {
+      console.log(
+        "[birds]",
+        "[disconnect] socket disconnected with reason",
+        reason
+      );
+
+      // Remove the player from the playersManager
+      this.playersManager.removePlayer(socket.id);
+
+      // Tell clients this player of ID has left the game
+      this.broadcast(socket.id, "player_disconnect", socket.id);
+
+      // Remove socket from array of sockets
+      this.sockets = this.sockets.filter((i) => i.id !== socket.id);
+    });
+
+    socket.on(
+      "say_hi",
+      (
+        nick: string,
+        floor: number,
+        fn: (gameState: ServerStateEnum, playerId: string) => void
+      ) => {
+        fn(this.state, socket.id);
+
+        this.playerLog(socket, nick, floor);
+      }
+    );
+  }
+
+  updateGameState(newState: ServerStateEnum, notifyClients: boolean) {
     this.state = newState;
 
     switch (this.state) {
@@ -67,15 +114,13 @@ export default class Game {
 
     // If requested, inform clients about the change
     if (notifyClients) {
-      this.nsp.in(this.roomID).emit("update_game_state", newState);
+      this.sockets.forEach(function (socket) {
+        socket.emit("update_game_state", newState);
+      });
     }
   }
 
-  public playerLog(
-    socket: Socket<BirdsListenEvents, BirdsEmitEvents>,
-    nick: string,
-    floor: number
-  ) {
+  playerLog(socket: Socket, nick: string, floor: number) {
     const player = this.playersManager.getPlayer(socket.id);
 
     if (typeof player === "undefined") {
@@ -88,16 +133,18 @@ export default class Game {
       return;
     }
 
-    socket.on("change_ready_state", (readyState) => {
+    socket.on("change_ready_state", (readyState: boolean) => {
       // If the server is currently waiting for players, update ready state
       if (this.state === ServerStateEnum.WaitingForPlayers) {
         console.log("[birds]", "[change_ready_state]", "waiting for players");
 
         this.playersManager.changeLobbyState(socket.id, readyState);
 
-        socket
-          .to(this.roomID)
-          .emit("player_ready_state", player.getPlayerObject());
+        this.broadcast(
+          socket.id,
+          "player_ready_state",
+          player.getPlayerObject()
+        );
       }
     });
 
@@ -110,10 +157,10 @@ export default class Game {
     // Notify new client about other players AND notify other about the new one ;)
     socket.emit("player_list", this.playersManager.getPlayerList());
 
-    socket.to(this.roomID).emit("new_player", player.getPlayerObject());
+    this.broadcast(socket.id, "new_player", player.getPlayerObject());
   }
 
-  private gameOver() {
+  gameOver() {
     // Stop game loop
     if (this.timer) {
       clearInterval(this.timer);
@@ -138,7 +185,9 @@ export default class Game {
       players = this.playersManager.resetPlayersForNewGame();
 
       for (let i = 0; i < players.length; i++) {
-        this.nsp.in(this.roomID).emit("player_ready_state", players[i]);
+        this.sockets.forEach(function (socket) {
+          socket.emit("player_ready_state", players[i]);
+        });
       }
 
       // Notify players of the new game state
@@ -146,7 +195,7 @@ export default class Game {
     }, Const.TIME_BETWEEN_GAMES);
   }
 
-  private startGameLoop() {
+  startGameLoop() {
     // Change server state
     this.updateGameState(ServerStateEnum.OnGame, true);
 
@@ -190,9 +239,11 @@ export default class Game {
         }
       }
 
-      this.nsp.in(this.roomID).emit("game_loop_update", {
-        players: this.playersManager.getOnGamePlayerList(),
-        pipes: this.pipeManager.getPipeList(),
+      this.sockets.forEach((socket) => {
+        socket.emit("game_loop_update", {
+          players: this.playersManager.getOnGamePlayerList(),
+          pipes: this.pipeManager.getPipeList(),
+        });
       });
     }, 1000 / 60);
   }
