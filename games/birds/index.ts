@@ -1,10 +1,10 @@
 import { Namespace, Server } from "socket.io";
 import { ServerStateEnum } from "./constants";
-import Game from "./game";
+import Birds from "./game";
 import { PipeTinyObject } from "./pipe";
 import { PlayerTinyObject } from "./player";
 
-const games = new Map<string, Game>();
+const games = new Map<string, Birds>();
 
 function getOrCreateGame(
   roomID: string,
@@ -13,7 +13,7 @@ function getOrCreateGame(
   const instance = games.get(roomID);
 
   if (typeof instance === "undefined") {
-    let game = new Game(roomID, nsp);
+    let game = new Birds(roomID, nsp);
 
     game.start();
 
