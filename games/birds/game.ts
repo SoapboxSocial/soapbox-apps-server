@@ -11,7 +11,7 @@ import { PlayerTinyObject } from "./player";
 import PlayersManager from "./playersManager";
 
 export default class Birds {
-  public roomID: string;
+  public readonly roomID: string;
   public state: ServerStateEnum;
   public playersManager: PlayersManager;
 
@@ -38,8 +38,6 @@ export default class Birds {
   public stop = async () => {};
 
   public start = () => {
-    console.log(this.nsp, this.roomID);
-
     this.playersManager.on("players-ready", () => {
       console.log("[birds]", "players ready, start game!");
 
@@ -76,7 +74,7 @@ export default class Birds {
 
     // If requested, inform clients about the change
     if (notifyClients) {
-      this.nsp.emit("update_game_state", newState);
+      this.nsp.in(this.roomID).emit("update_game_state", newState);
     }
   };
 
@@ -104,7 +102,9 @@ export default class Birds {
 
         this.playersManager.changeLobbyState(socket.id, readyState);
 
-        this.nsp.emit("player_ready_state", player.getPlayerObject());
+        this.nsp
+          .in(this.roomID)
+          .emit("player_ready_state", player.getPlayerObject());
       }
     });
 
@@ -117,7 +117,7 @@ export default class Birds {
     // Notify new client about other players AND notify other about the new one ;)
     socket.emit("player_list", this.playersManager.getPlayerList());
 
-    this.nsp.emit("new_player", player.getPlayerObject());
+    this.nsp.in(this.roomID).emit("new_player", player.getPlayerObject());
   };
 
   private gameOver = () => {
@@ -145,7 +145,7 @@ export default class Birds {
       players = this.playersManager.resetPlayersForNewGame();
 
       for (let i = 0; i < players.length; i++) {
-        this.nsp.emit("player_ready_state", players[i]);
+        this.nsp.in(this.roomID).emit("player_ready_state", players[i]);
       }
 
       // Notify players of the new game state
@@ -197,7 +197,7 @@ export default class Birds {
         }
       }
 
-      this.nsp.emit("game_loop_update", {
+      this.nsp.in(this.roomID).emit("game_loop_update", {
         players: this.playersManager.getOnGamePlayerList(),
         pipes: this.pipeManager.getPipeList(),
       });

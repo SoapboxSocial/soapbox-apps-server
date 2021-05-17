@@ -13,7 +13,7 @@ function getOrCreateGame(
   const instance = games.get(roomID);
 
   if (typeof instance === "undefined") {
-    let game = new Birds(roomID, nsp);
+    const game = new Birds(roomID, nsp);
 
     game.start();
 
@@ -74,6 +74,8 @@ export default function birds(io: Server<BirdsListenEvents, BirdsEmitEvents>) {
     const roomID = socket.handshake.query.roomID as string;
 
     const socketID = socket.id;
+
+    socket.join(roomID);
 
     console.log(
       "[birds]",
