@@ -3,6 +3,7 @@ import type { Socket } from "socket.io";
 import Player from "./player";
 import Scores from "./scoreSystem";
 import { PlayerStateEnum } from "./constants";
+import { BirdsEmitEvents, BirdsListenEvents } from ".";
 
 const NB_AVAILABLE_BIRDS_COLOR = 8;
 
@@ -11,7 +12,10 @@ export default class PlayersManager extends EventEmitter {
   private posOnGrid = 0;
   private scores = new Scores();
 
-  addNewPlayer(playerSocket: Socket, id: string) {
+  addNewPlayer(
+    playerSocket: Socket<BirdsListenEvents, BirdsEmitEvents>,
+    id: string
+  ) {
     // Set an available color according the number of client's sprites
     const birdColor = Math.floor(
       Math.random() * (NB_AVAILABLE_BIRDS_COLOR - 1 + 1)
