@@ -6,7 +6,7 @@ import sample from "../../util/sample";
 import Player, { PlayerRole, PlayerStatus } from "./player";
 import shuffle from "lodash.shuffle";
 
-const ROUND_DURATION = 60 * 3;
+const ROUND_DURATION = 60 * 1.5;
 
 export enum GameAct {
   DAY = "DAY",
