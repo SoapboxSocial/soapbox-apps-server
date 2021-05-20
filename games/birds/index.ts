@@ -1,8 +1,9 @@
-import { Namespace, Server } from "socket.io";
+import type { User } from "@soapboxsocial/minis.js";
+import type { Namespace, Server } from "socket.io";
 import { ServerStateEnum } from "./constants";
 import Birds from "./game";
-import { PipeTinyObject } from "./pipe";
-import { PlayerTinyObject } from "./player";
+import type { PipeTinyObject } from "./pipe";
+import type { PlayerTinyObject } from "./player";
 
 const games = new Map<string, Birds>();
 
@@ -40,7 +41,7 @@ async function deleteGame(roomID: string) {
 export interface BirdsListenEvents {
   close_game: () => void;
   say_hi: (
-    nick: string,
+    user: User,
     floor: number,
     fn: (gameState: ServerStateEnum, playerId: string) => void
   ) => void;
@@ -87,10 +88,10 @@ export default function birds(io: Server<BirdsListenEvents, BirdsEmitEvents>) {
 
     game.playersManager.addNewPlayer(socket, socketID);
 
-    socket.on("say_hi", (nick, floor, fn) => {
+    socket.on("say_hi", (user, floor, fn) => {
       fn(game.state, socketID);
 
-      game.playerLog(socket, nick, floor);
+      game.playerLog(socket, user, floor);
     });
 
     socket.on("disconnect", (reason) => {

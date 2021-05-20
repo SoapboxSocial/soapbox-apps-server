@@ -1,5 +1,7 @@
-import { Namespace, Socket } from "socket.io";
-import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import type { User } from "@soapboxsocial/minis.js";
+import type { Namespace, Socket } from "socket.io";
+import type { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { GameTokens, postScores } from "../../lib/scores";
 import { checkCollision } from "./collisionEngine";
 import {
   constants as Const,
@@ -7,7 +9,7 @@ import {
   ServerStateEnum,
 } from "./constants";
 import PipeManager from "./pipeManager";
-import { PlayerTinyObject } from "./player";
+import type { PlayerTinyObject } from "./player";
 import PlayersManager from "./playersManager";
 
 export default class Birds {
@@ -35,7 +37,15 @@ export default class Birds {
     this.timeStartGame = 0;
   }
 
-  public stop = async () => {};
+  public stop = async () => {
+    const scoresArray = this.playersManager.getHighScores();
+
+    await postScores(
+      Object.fromEntries(scoresArray.map((el) => [el.id, el.score])),
+      GameTokens.FLAPPY_BIRD,
+      this.roomID
+    );
+  };
 
   public start = () => {
     this.playersManager.on("players-ready", () => {
@@ -80,7 +90,7 @@ export default class Birds {
 
   public playerLog = (
     socket: Socket<BirdsListenEvents, BirdsEmitEvents>,
-    nick: string,
+    user: User,
     floor: number
   ) => {
     const player = this.playersManager.getPlayer(socket.id);
@@ -112,7 +122,7 @@ export default class Birds {
     socket.on("player_jump", () => player.jump());
 
     // Set player's nickname and prepare him for the next game
-    this.playersManager.prepareNewPlayer(player, nick, floor);
+    this.playersManager.prepareNewPlayer(player, user, floor);
 
     // Notify new client about other players AND notify other about the new one ;)
     socket.emit("player_list", this.playersManager.getPlayerList());

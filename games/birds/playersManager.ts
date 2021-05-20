@@ -1,16 +1,16 @@
+import type { User } from "@soapboxsocial/minis.js";
 import { EventEmitter } from "events";
 import type { Socket } from "socket.io";
-import Player from "./player";
-import Scores from "./scoreSystem";
-import { PlayerStateEnum } from "./constants";
 import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { PlayerStateEnum } from "./constants";
+import Player from "./player";
 
 const NB_AVAILABLE_BIRDS_COLOR = 8;
 
 export default class PlayersManager extends EventEmitter {
   private playersList: Map<string, Player> = new Map();
   private posOnGrid = 0;
-  private scores = new Scores();
+  private scores: Record<string, number> = {};
 
   addNewPlayer(
     playerSocket: Socket<BirdsListenEvents, BirdsEmitEvents>,
@@ -140,30 +140,78 @@ export default class PlayersManager extends EventEmitter {
   }
 
   sendPlayerScore() {
+    const highScores = this.getHighScores();
+
     // Save player score
     this.playersList.forEach((player) => {
-      this.scores.savePlayerScore(player, player.getScore());
+      this.savePlayerScore(player, player.getScore());
     });
 
-    // Retrieve highscores and then send scores to players
-    this.scores.getHighScores((highScores) => {
-      this.playersList.forEach((player) => {
-        // Send score to the players
-        player.sendScore(this.playersList.keys.length, highScores);
-      });
+    // Send score to the players
+    this.playersList.forEach((player) => {
+      player.sendScore(this.playersList.size, highScores);
     });
   }
 
-  prepareNewPlayer(player: Player, nickname: string, floor: number) {
-    // Set his nickname
-    player.setNick(nickname);
+  prepareNewPlayer(player: Player, user: User, floor: number) {
+    // Set User obj
+    player.setUserData(user);
 
+    // Set his nickname
+    player.setNick(user.username);
+
+    // Set player's floor
     player.setFloor(floor);
 
     // Retrieve his highscore
-    this.scores.setPlayerHighScore(player);
+    this.setPlayerHighScore(player);
 
     // Put him on the game grid
     player.preparePlayer(this.posOnGrid++);
+  }
+
+  setPlayerHighScore(player: Player) {
+    const nick = player.getNick();
+
+    if (Object.prototype.hasOwnProperty.call(this.scores, nick)) {
+      player.setBestScore(this.scores[nick]);
+
+      return;
+    }
+
+    player.setBestScore(0);
+  }
+
+  savePlayerScore(player: Player, lastScore: number) {
+    const nick = player.getNick();
+
+    const highScore = player.getHighScore();
+
+    // If the player just beats his highscore, record it !
+    if (lastScore > highScore) {
+      this.scores[nick] = lastScore;
+    }
+  }
+
+  getHighScores() {
+    const userArrayFromPlayers = Array.from(this.playersList.values()).map(
+      (player) => player.user
+    );
+
+    const highScores = Object.entries(this.scores).map(([nick, score]) => {
+      const user = userArrayFromPlayers.find(
+        (el) => el.username === nick
+      ) as User;
+
+      return {
+        id: user.id,
+        player: nick,
+        score,
+      };
+    });
+
+    const sortedHighScores = highScores.sort((a, b) => b.score - a.score);
+
+    return sortedHighScores;
   }
 }

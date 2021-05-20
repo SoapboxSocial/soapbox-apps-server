@@ -1,6 +1,7 @@
 import { Socket } from "socket.io";
 import { constants as Const, PlayerStateEnum } from "./constants";
 import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import type { User } from "@soapboxsocial/minis.js";
 
 // Defines
 const MAX_BIRDS_IN_A_ROW = 3;
@@ -33,6 +34,7 @@ export default class Player {
   private _rank: number;
   private _lastPipe: number;
   private _playerTinyObject: PlayerTinyObject;
+  public user!: User;
 
   constructor(
     socket: Socket<BirdsListenEvents, BirdsEmitEvents>,
@@ -90,6 +92,10 @@ export default class Player {
 
   setNick(nick: string) {
     this._playerTinyObject.nick = nick;
+  }
+
+  setUserData(user: User) {
+    this.user = user;
   }
 
   setFloor(floor: number) {
@@ -180,8 +186,9 @@ export default class Player {
   }
 
   sendScore(
-    NBPlayers: number,
-    HighScores: {
+    numberOfPlayers: number,
+    highScores: {
+      id: number;
       player: string;
       score: number;
     }[]
@@ -196,8 +203,8 @@ export default class Player {
       score: this._playerTinyObject.score,
       bestScore: this._playerTinyObject.best_score,
       rank: this._rank,
-      nbPlayers: NBPlayers,
-      highscores: HighScores,
+      nbPlayers: numberOfPlayers,
+      highscores: highScores,
     });
   }
 }
