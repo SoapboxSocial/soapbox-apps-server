@@ -2,6 +2,7 @@ import type { User } from "@soapboxsocial/minis.js";
 import { EventEmitter } from "events";
 import type { Socket } from "socket.io";
 import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { birdsLogger } from "../../config/winston";
 import { PlayerStateEnum } from "./constants";
 import Player from "./player";
 
@@ -26,10 +27,8 @@ export default class PlayersManager extends EventEmitter {
 
     this.playersList.set(id, newPlayer);
 
-    console.log(
-      "[birds]",
-      "[PlayersManager]",
-      `new player connected, there are currently ${this.playersList.size} player(s)`
+    birdsLogger.info(
+      `[PlayersManager] new player connected, there are currently ${this.playersList.size} player(s)`
     );
 
     return newPlayer;
@@ -41,11 +40,7 @@ export default class PlayersManager extends EventEmitter {
 
   removePlayer(id: string) {
     if (this.playersList.has(id)) {
-      console.log(
-        "[birds]",
-        "[PlayersManager]",
-        `removing player of id: ${id}`
-      );
+      birdsLogger.info(`[PlayersManager] removing player of id: ${id}`);
 
       this.playersList.delete(id);
     }
@@ -55,11 +50,7 @@ export default class PlayersManager extends EventEmitter {
     const playerToReady = this.playersList.get(id);
 
     if (typeof playerToReady === "undefined") {
-      console.error(
-        "[birds]",
-        "[PlayersManager]",
-        `player with id: ${id} not found!`
-      );
+      birdsLogger.error(`[PlayersManager] player with id: ${id} not found!`);
 
       return;
     }
@@ -70,7 +61,7 @@ export default class PlayersManager extends EventEmitter {
     // Check if all players are ready
     for (const [id, player] of this.playersList.entries()) {
       if (player.getState() === PlayerStateEnum.WaitingInLobby) {
-        console.log("[birds]", "[PlayersManager]", `${id} is not yet ready`);
+        birdsLogger.info(`[PlayersManager] ${id} is not yet ready`);
 
         return;
       }
@@ -142,7 +133,9 @@ export default class PlayersManager extends EventEmitter {
   sendPlayerScore() {
     // Save player score
     this.playersList.forEach((player) => {
-      console.log("[birds]", "[savePlayerScore]", player.getScore());
+      birdsLogger.info(
+        `[PlayersManager] [savePlayerScore] ${player.getScore()}`
+      );
 
       this.savePlayerScore(player, player.getScore());
     });
@@ -151,7 +144,9 @@ export default class PlayersManager extends EventEmitter {
 
     // Send score to the players
     this.playersList.forEach((player) => {
-      console.log("[birds]", "[sendPlayerScore]", highScores);
+      birdsLogger.info(
+        `[PlayersManager] [sendPlayerScore] ${JSON.stringify(highScores)}`
+      );
 
       player.sendScore(this.playersList.size, highScores);
     });
@@ -190,7 +185,9 @@ export default class PlayersManager extends EventEmitter {
   }
 
   getHighScores() {
-    console.log("[birds]", "[getHighScores]", this.scores);
+    birdsLogger.info(
+      `[PlayersManager] [getHighScores] ${JSON.stringify(this.scores)}`
+    );
 
     const userArrayFromPlayers = Array.from(this.playersList.values()).map(
       (player) => player.user

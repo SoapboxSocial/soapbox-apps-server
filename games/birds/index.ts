@@ -1,5 +1,6 @@
 import type { User } from "@soapboxsocial/minis.js";
 import type { Namespace, Server } from "socket.io";
+import { birdsLogger } from "../../config/winston";
 import { ServerStateEnum } from "./constants";
 import Birds from "./game";
 import type { PipeTinyObject } from "./pipe";
@@ -78,11 +79,7 @@ export default function birds(io: Server<BirdsListenEvents, BirdsEmitEvents>) {
 
     socket.join(roomID);
 
-    console.log(
-      "[birds]",
-      "[connection] new socket connected with id",
-      socketID
-    );
+    birdsLogger.info(`[connection] new socket connected with id ${socketID}`);
 
     const game = getOrCreateGame(roomID, nsp);
 
@@ -95,10 +92,8 @@ export default function birds(io: Server<BirdsListenEvents, BirdsEmitEvents>) {
     });
 
     socket.on("disconnect", (reason) => {
-      console.log(
-        "[birds]",
-        "[disconnect] socket disconnected with reason",
-        reason
+      birdsLogger.info(
+        `[disconnect] socket disconnected with reason ${reason}`
       );
 
       const game = games.get(roomID);
@@ -113,11 +108,7 @@ export default function birds(io: Server<BirdsListenEvents, BirdsEmitEvents>) {
     });
 
     socket.on("close_game", async () => {
-      console.log(
-        "[birds]",
-        "[close_game]",
-        `deleting game with roomID of ${roomID}`
-      );
+      birdsLogger.info(`[close_game] deleting game with roomID of ${roomID}`);
 
       await deleteGame(roomID);
 

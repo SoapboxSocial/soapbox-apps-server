@@ -1,7 +1,8 @@
-import { Socket } from "socket.io";
-import { constants as Const, PlayerStateEnum } from "./constants";
-import { BirdsEmitEvents, BirdsListenEvents } from ".";
 import type { User } from "@soapboxsocial/minis.js";
+import type { Socket } from "socket.io";
+import { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { birdsLogger } from "../../config/winston";
+import { constants as Const, PlayerStateEnum } from "./constants";
 
 // Defines
 const MAX_BIRDS_IN_A_ROW = 3;
@@ -123,11 +124,7 @@ export default class Player {
 
     this._playerTinyObject.state = PlayerStateEnum.Died;
 
-    console.log(
-      "[birds]",
-      "[died]",
-      `${this._playerTinyObject.nick} just died`
-    );
+    birdsLogger.info(`[died] ${this._playerTinyObject.nick} just died`);
   }
 
   setReadyState(readyState: boolean) {
@@ -179,7 +176,7 @@ export default class Player {
   updateScore(pipeID: number) {
     // If the current pipe ID is different from the last one, it means the players meets a new pipe. So update score
     if (pipeID !== this._lastPipe) {
-      console.log("[birds]", "[updateScore]");
+      birdsLogger.info(`[updateScore]`);
 
       this._playerTinyObject.score++;
 

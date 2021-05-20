@@ -1,6 +1,7 @@
 import type { User } from "@soapboxsocial/minis.js";
 import type { Namespace, Socket } from "socket.io";
 import type { BirdsEmitEvents, BirdsListenEvents } from ".";
+import { birdsLogger } from "../../config/winston";
 import { GameTokens, postScores } from "../../lib/scores";
 import { checkCollision } from "./collisionEngine";
 import {
@@ -49,13 +50,13 @@ export default class Birds {
 
   public start = () => {
     this.playersManager.on("players-ready", () => {
-      console.log("[birds]", "players ready, start game!");
+      birdsLogger.info("players ready, start game!");
 
       this.startGameLoop();
     });
 
     this.pipeManager.on("need_new_pipe", () => {
-      console.log("[birds]", "generate new pipe!");
+      birdsLogger.info("generate new pipe!");
 
       // Create a pipe and send it to clients
       this.pipeManager.newPipe();
@@ -70,16 +71,16 @@ export default class Birds {
 
     switch (this.state) {
       case ServerStateEnum.WaitingForPlayers:
-        console.log("[birds]", "[updateGameState]", "waiting for players");
+        birdsLogger.info(`[updateGameState] waiting for players`);
         break;
       case ServerStateEnum.OnGame:
-        console.log("[birds]", "[updateGameState]", "playing game");
+        birdsLogger.info(`[updateGameState] playing game`);
         break;
       case ServerStateEnum.Ranking:
-        console.log("[birds]", "[updateGameState]", "displaying scoreboard");
+        birdsLogger.info(`[updateGameState] displaying scoreboard`);
         break;
       default:
-        console.log("[birds]", "[updateGameState]", "server is dead");
+        birdsLogger.info(`[updateGameState] server is dead`);
     }
 
     // If requested, inform clients about the change
@@ -96,11 +97,7 @@ export default class Birds {
     const player = this.playersManager.getPlayer(socket.id);
 
     if (typeof player === "undefined") {
-      console.error(
-        "[birds]",
-        "[playerLog]",
-        `player with id: ${socket.id} not found!`
-      );
+      birdsLogger.error(`[playerLog] player with id: ${socket.id} not found!`);
 
       return;
     }
@@ -108,7 +105,7 @@ export default class Birds {
     socket.on("change_ready_state", (readyState) => {
       // If the server is currently waiting for players, update ready state
       if (this.state === ServerStateEnum.WaitingForPlayers) {
-        console.log("[birds]", "[change_ready_state]", "waiting for players");
+        birdsLogger.info(`[change_ready_state] waiting for players`);
 
         this.playersManager.changeLobbyState(socket.id, readyState);
 
