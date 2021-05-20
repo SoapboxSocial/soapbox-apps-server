@@ -179,6 +179,8 @@ export default class Player {
   updateScore(pipeID: number) {
     // If the current pipe ID is different from the last one, it means the players meets a new pipe. So update score
     if (pipeID !== this._lastPipe) {
+      console.log("[birds]", "[updateScore]");
+
       this._playerTinyObject.score++;
 
       this._lastPipe = pipeID;

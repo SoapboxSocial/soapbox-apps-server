@@ -149,6 +149,8 @@ export default class PlayersManager extends EventEmitter {
 
     // Send score to the players
     this.playersList.forEach((player) => {
+      console.log("[birds]", "[sendPlayerScore]", highScores);
+
       player.sendScore(this.playersList.size, highScores);
     });
   }
@@ -164,22 +166,14 @@ export default class PlayersManager extends EventEmitter {
     player.setFloor(floor);
 
     // Retrieve his highscore
-    this.setPlayerHighScore(player);
+    if (Object.prototype.hasOwnProperty.call(this.scores, user.username)) {
+      player.setBestScore(this.scores[user.username]);
+    } else {
+      player.setBestScore(0);
+    }
 
     // Put him on the game grid
     player.preparePlayer(this.posOnGrid++);
-  }
-
-  setPlayerHighScore(player: Player) {
-    const nick = player.getNick();
-
-    if (Object.prototype.hasOwnProperty.call(this.scores, nick)) {
-      player.setBestScore(this.scores[nick]);
-
-      return;
-    }
-
-    player.setBestScore(0);
   }
 
   savePlayerScore(player: Player, lastScore: number) {
@@ -194,6 +188,8 @@ export default class PlayersManager extends EventEmitter {
   }
 
   getHighScores() {
+    console.log("[birds]", "[getHighScores]", this.scores);
+
     const userArrayFromPlayers = Array.from(this.playersList.values()).map(
       (player) => player.user
     );
