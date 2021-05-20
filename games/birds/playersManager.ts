@@ -140,12 +140,14 @@ export default class PlayersManager extends EventEmitter {
   }
 
   sendPlayerScore() {
-    const highScores = this.getHighScores();
-
     // Save player score
     this.playersList.forEach((player) => {
+      console.log("[birds]", "[savePlayerScore]", player.getScore());
+
       this.savePlayerScore(player, player.getScore());
     });
+
+    const highScores = this.getHighScores();
 
     // Send score to the players
     this.playersList.forEach((player) => {
