@@ -65,6 +65,12 @@ export default class PlayersManager extends EventEmitter {
 
         return;
       }
+
+      if (this.playersList.size < 2) {
+        birdsLogger.info(`[PlayersManager] two birds needed to play!`);
+
+        return;
+      }
     }
 
     // If players are ready, start the game
